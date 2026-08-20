@@ -16,4 +16,12 @@ Run the tests with:
 python3 -m unittest discover -v
 ```
 
-Deploy `python3 run.py` to a Python host. Static-only hosts such as GitHub Pages cannot serve the API endpoint.
+## Deploy to Vercel
+
+Import the repository into Vercel and leave the Framework Preset as **Other**. Vercel serves
+the files in `public/` and deploys `api/standings.py` at `/api/standings`; no build command is
+required. Set `FPL_LEAGUE_ID` in the Vercel project environment variables only when overriding
+the league ID from `config.py`.
+
+For a traditional Python host, run `python3 run.py`. Static-only hosts such as GitHub Pages
+cannot serve the API endpoint.

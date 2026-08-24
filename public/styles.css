@@ -271,20 +271,30 @@ a:hover { color: #5f5f5f; }
 }
 
 .ownership-list {
+  --ownership-column-gap: 10px;
+  --ownership-columns: minmax(120px, 1fr) minmax(3ch, max-content) minmax(6ch, max-content) minmax(5ch, max-content) minmax(10ch, max-content);
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: var(--ownership-columns);
+  column-gap: var(--ownership-column-gap);
   min-width: 0;
 }
 
 .ownership-row {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) 82px 74px 46px 88px;
+  grid-column: 1 / -1;
+  grid-template-columns: var(--ownership-columns);
   align-items: center;
-  gap: 10px;
+  column-gap: var(--ownership-column-gap);
   min-width: 0;
   padding: 7px 0;
   border-bottom: 1px solid #f0f0f0;
   font-size: .82rem;
+}
+
+@supports (grid-template-columns: subgrid) {
+  .ownership-row {
+    grid-template-columns: subgrid;
+  }
 }
 
 .ownership-row span {
@@ -437,10 +447,13 @@ a:hover { color: #5f5f5f; }
   }
 
   .ownership-row {
-    gap: 6px;
-    grid-template-columns: minmax(62px, 1fr) 40px 48px 30px 62px;
     padding: 5px 0;
     font-size: .62rem;
+  }
+
+  .ownership-list {
+    --ownership-column-gap: 6px;
+    --ownership-columns: minmax(62px, 1fr) minmax(3ch, max-content) minmax(6ch, max-content) minmax(5ch, max-content) minmax(10ch, max-content);
   }
 
   .ownership-row strong { font-size: .6rem; }

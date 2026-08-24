@@ -191,7 +191,10 @@ function renderOwnership() {
   duoImportanceSelect.value = activeDuoImportanceName;
 
   const players = selectedDuo.players.slice().sort(
-    (a, b) => Math.abs(b.importance) - Math.abs(a.importance) || a.name.localeCompare(b.name),
+    (a, b) =>
+      Math.abs(b.importance) - Math.abs(a.importance) ||
+      Math.sign(b.importance) - Math.sign(a.importance) ||
+      a.name.localeCompare(b.name),
   );
   playerOwnership.replaceChildren(
     createImportanceHeader(),

@@ -5,8 +5,11 @@ const refreshButton = document.querySelector("#refresh");
 const lastUpdated = document.querySelector("#last-updated");
 const pairsViewButton = document.querySelector("#pairs-view");
 const teamsViewButton = document.querySelector("#teams-view");
+const playerOwnership = document.querySelector("#player-ownership");
+const duoImportanceSelect = document.querySelector("#duo-importance-select");
 let standingsData;
-let activeView = "teams";
+let activeView = "pairs";
+let activeDuoImportanceName = "";
 let updatedAt;
 
 function formatTimeAgo(date) {
@@ -133,6 +136,26 @@ function createPairRow(pair) {
   return row;
 }
 
+function formatPercent(value) {
+  return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
+}
+
+function createImportanceRow(player) {
+  const row = document.createElement("div");
+  const name = document.createElement("span");
+  const opponent = document.createElement("span");
+  const score = document.createElement("span");
+  const importance = document.createElement("strong");
+
+  row.className = "ownership-row";
+  name.textContent = player.name;
+  opponent.textContent = player.opponent;
+  score.textContent = player.score;
+  importance.textContent = formatPercent(player.importance);
+  row.append(name, opponent, score, importance);
+  return row;
+}
+
 function renderActiveView() {
   if (!standingsData) return;
   const isPairs = activeView === "pairs";
@@ -143,6 +166,48 @@ function renderActiveView() {
   );
 }
 
+function renderOwnership() {
+  if (!standingsData) return;
+  const duoImportance = standingsData.duoImportance || [];
+  if (!duoImportance.length) {
+    duoImportanceSelect.replaceChildren();
+    playerOwnership.replaceChildren();
+    return;
+  }
+
+  const selectedDuo =
+    duoImportance.find((duo) => duo.name === activeDuoImportanceName) || duoImportance[0];
+  activeDuoImportanceName = selectedDuo.name;
+  duoImportanceSelect.replaceChildren(
+    ...duoImportance.map((duo) => {
+      const option = document.createElement("option");
+      option.value = duo.name;
+      option.textContent = duo.name;
+      return option;
+    }),
+  );
+  duoImportanceSelect.value = activeDuoImportanceName;
+
+  const players = selectedDuo.players.slice().sort(
+    (a, b) => Math.abs(b.importance) - Math.abs(a.importance) || a.name.localeCompare(b.name),
+  );
+  playerOwnership.replaceChildren(
+    createImportanceHeader(),
+    ...players.map(createImportanceRow),
+  );
+}
+
+function createImportanceHeader() {
+  const row = document.createElement("div");
+  row.className = "ownership-row ownership-header";
+  for (const label of ["Player", "Opp", "Score", "Importance"]) {
+    const cell = document.createElement("span");
+    cell.textContent = label;
+    row.append(cell);
+  }
+  return row;
+}
+
 function renderStandings(data) {
   standingsData = data;
   leagueName.textContent = data.league.name;
@@ -150,6 +215,7 @@ function renderStandings(data) {
   updatedAt = new Date(data.updatedAt);
   renderLastUpdated();
   renderActiveView();
+  renderOwnership();
 }
 
 async function loadStandings(force = false) {
@@ -179,6 +245,10 @@ pairsViewButton.addEventListener("click", () => {
 teamsViewButton.addEventListener("click", () => {
   activeView = "teams";
   renderActiveView();
+});
+duoImportanceSelect.addEventListener("change", () => {
+  activeDuoImportanceName = duoImportanceSelect.value;
+  renderOwnership();
 });
 setInterval(renderLastUpdated, 30_000);
 loadStandings();

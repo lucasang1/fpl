@@ -110,6 +110,10 @@ button:disabled { cursor: wait; opacity: .65; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
 }
 
 .refresh-icon {
@@ -224,6 +228,93 @@ a:hover { color: #5f5f5f; }
 
 .pair-members > * + * { margin-top: 8px; }
 
+.ownership-panel {
+  overflow-x: auto;
+  margin-top: 12px;
+  padding: 14px 16px 16px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 8%);
+}
+
+.ownership-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.ownership-toolbar h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.duo-select-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.duo-select-label select {
+  max-width: 220px;
+  border: 1px solid #d7d7d7;
+  border-radius: 8px;
+  padding: 7px 9px;
+  color: #242424;
+  background: white;
+  font: inherit;
+}
+
+.ownership-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-width: 0;
+}
+
+.ownership-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 90px 56px 88px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: .82rem;
+}
+
+.ownership-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ownership-row strong {
+  flex: 0 0 auto;
+  font-size: .78rem;
+  text-align: right;
+}
+
+.ownership-row span:nth-child(3) {
+  text-align: right;
+}
+
+.ownership-header {
+  color: #666;
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.ownership-header span:nth-child(4) {
+  text-align: right;
+}
+
 @media (max-width: 700px) {
   body { padding: 0 12px 16px; }
 
@@ -256,6 +347,12 @@ a:hover { color: #5f5f5f; }
   #refresh {
     padding: 5px 7px;
     font-size: .58rem;
+  }
+
+  #refresh {
+    width: 28px;
+    height: 28px;
+    padding: 0;
   }
 
   .refresh-icon {
@@ -309,4 +406,42 @@ a:hover { color: #5f5f5f; }
 
   .pair-members > * { min-height: 20px; }
   .pair-members > * + * { margin-top: 4px; }
+
+  .ownership-panel { padding: 10px 8px 12px; }
+
+  .ownership-toolbar {
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .ownership-toolbar h2 {
+    flex: 0 0 auto;
+    font-size: .82rem;
+  }
+
+  .duo-select-label {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    min-width: 0;
+    font-size: .62rem;
+  }
+
+  .duo-select-label select {
+    width: min(38vw, 132px);
+    max-width: 100%;
+    padding: 5px 7px;
+  }
+
+  .ownership-row {
+    gap: 6px;
+    grid-template-columns: minmax(74px, 1fr) 48px 38px 70px;
+    padding: 5px 0;
+    font-size: .62rem;
+  }
+
+  .ownership-row strong { font-size: .6rem; }
+  .ownership-header { font-size: .5rem; letter-spacing: .02em; }
 }

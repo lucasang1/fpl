@@ -9,7 +9,7 @@ PORT = int(os.getenv("PORT", "8000"))
 PAIRINGS = (
     ("Luc & Josh", (2020069, 3497860)),
     ("Praeman & Ding", (646370, 712762)),
-    ("Woba & Syuaib", (3430323, 3425313)),
+    ("Wob & Syuaib", (3430323, 3425313)),
     ("Isaac & Chia Yin", (2168885, 369209)),
     ("Mau & Mau", (2062502, 2062502)),
 )

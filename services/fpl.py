@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -88,6 +89,187 @@ def _fetch_badges(
             for entry_id, badge_url in executor.map(fetch_badge, entries)
             if badge_url is not None
         }
+
+
+def _format_player_ownership(
+    entries: Iterable[JsonObject],
+    gameweek_id: int,
+    elements: Iterable[JsonObject],
+    fetch_json: JsonFetcher,
+) -> list[JsonObject]:
+    entries = list(entries)
+    if not entries:
+        return []
+
+    player_names = {
+        element["id"]: element.get("web_name")
+        or f'{element.get("first_name", "")} {element.get("second_name", "")}'.strip()
+        for element in elements
+    }
+
+    def fetch_picks(entry: JsonObject) -> list[JsonObject] | None:
+        try:
+            data = fetch_json(
+                f"{FPL_API_URL}/entry/{entry['entry']}/event/{gameweek_id}/picks/"
+            )
+        except Exception:
+            return None
+        return data.get("picks", [])
+
+    owned = defaultdict(int)
+    effective = defaultdict(int)
+    team_count = 0
+    with ThreadPoolExecutor(max_workers=min(8, len(entries))) as executor:
+        for picks in executor.map(fetch_picks, entries):
+            if picks is None:
+                continue
+            team_count += 1
+            for pick in picks:
+                player_id = pick["element"]
+                owned[player_id] += 1
+                effective[player_id] += pick.get("multiplier", 0)
+
+    if team_count == 0:
+        return []
+
+    ownership = [
+        {
+            "id": player_id,
+            "name": player_names.get(player_id, f"Player {player_id}"),
+            "ownership": round(owned_count / team_count * 100, 1),
+            "effectiveOwnership": round(effective[player_id] / team_count * 100, 1),
+        }
+        for player_id, owned_count in owned.items()
+    ]
+    ownership.sort(
+        key=lambda player: (
+            -player["effectiveOwnership"],
+            -player["ownership"],
+            player["name"],
+        )
+    )
+    return ownership
+
+
+def _format_duo_importance(
+    pairs: Iterable[JsonObject],
+    gameweek_id: int,
+    elements: Iterable[JsonObject],
+    teams: Iterable[JsonObject],
+    fixtures: Iterable[JsonObject],
+    live_elements: Iterable[JsonObject],
+    fetch_json: JsonFetcher,
+) -> list[JsonObject]:
+    pairs = list(pairs)
+    if not pairs:
+        return []
+
+    players = {
+        element["id"]: {
+            "name": element.get("web_name")
+            or f'{element.get("first_name", "")} {element.get("second_name", "")}'.strip()
+            or f'Player {element["id"]}',
+            "team": element.get("team"),
+        }
+        for element in elements
+    }
+    team_names = {team["id"]: team.get("short_name", team.get("name", "")) for team in teams}
+    live_points = {
+        element["id"]: element.get("stats", {}).get("total_points", 0)
+        for element in live_elements
+    }
+
+    fixtures_by_team: dict[int, list[JsonObject]] = defaultdict(list)
+    for fixture in fixtures:
+        home_id = fixture["team_h"]
+        away_id = fixture["team_a"]
+        started = bool(fixture.get("started") or fixture.get("finished"))
+        fixtures_by_team[home_id].append(
+            {
+                "opponent": team_names.get(away_id, str(away_id)),
+                "venue": "H",
+                "started": started,
+            }
+        )
+        fixtures_by_team[away_id].append(
+            {
+                "opponent": team_names.get(home_id, str(home_id)),
+                "venue": "A",
+                "started": started,
+            }
+        )
+
+    pick_cache: dict[int, list[JsonObject]] = {}
+
+    def picks_for_entry(entry_id: int) -> list[JsonObject]:
+        if entry_id not in pick_cache:
+            try:
+                data = fetch_json(
+                    f"{FPL_API_URL}/entry/{entry_id}/event/{gameweek_id}/picks/"
+                )
+            except Exception:
+                data = {"picks": []}
+            pick_cache[entry_id] = data.get("picks", [])
+        return pick_cache[entry_id]
+
+    pair_data = []
+    for pair in pairs:
+        owned: set[int] = set()
+        exposure: dict[int, int] = defaultdict(int)
+        for member in pair["members"]:
+            for pick in picks_for_entry(member["id"]):
+                player_id = pick["element"]
+                owned.add(player_id)
+                exposure[player_id] += pick.get("multiplier", 0)
+        pair_data.append({"name": pair["name"], "owned": owned, "exposure": exposure})
+
+    comparison_pairs = pair_data[:50]
+    all_owned = set().union(*(pair["owned"] for pair in pair_data))
+
+    def player_context(player_id: int) -> tuple[str, int | str]:
+        player = players.get(player_id, {})
+        player_fixtures = fixtures_by_team.get(player.get("team"), [])
+        if not player_fixtures:
+            return "-", "-"
+
+        opponent = ", ".join(
+            f'{fixture["opponent"]} ({fixture["venue"]})'
+            for fixture in player_fixtures
+        )
+        score = live_points.get(player_id, 0) if any(
+            fixture["started"] for fixture in player_fixtures
+        ) else "-"
+        return opponent, score
+
+    importance_by_duo = []
+    for selected in pair_data:
+        comparison = [
+            pair for pair in comparison_pairs if pair["name"] != selected["name"]
+        ]
+        rows = []
+        for player_id in all_owned:
+            selected_exposure = selected["exposure"].get(player_id, 0) * 100
+            average_exposure = (
+                sum(pair["exposure"].get(player_id, 0) * 100 for pair in comparison)
+                / len(comparison)
+                if comparison
+                else 0
+            )
+            opponent, score = player_context(player_id)
+            rows.append(
+                {
+                    "id": player_id,
+                    "name": players.get(player_id, {}).get("name", f"Player {player_id}"),
+                    "opponent": opponent,
+                    "score": score,
+                    "importance": round(selected_exposure - average_exposure, 1),
+                }
+            )
+
+        rows.sort(key=lambda player: (-player["importance"], player["name"]))
+        importance_by_duo.append({"name": selected["name"], "players": rows})
+
+    return importance_by_duo
 
 
 def _format_standings(
@@ -189,14 +371,27 @@ def fetch_standings(
     gameweek = _select_gameweek(bootstrap["events"])
     league, entries = _fetch_league(fetch_json)
     badges = _fetch_badges(entries, fetch_json)
-
     standings = _format_standings(entries, gameweek["id"], badges)
+    pairs = _format_pairs(standings, pairings)
+    fixtures = fetch_json(f"{FPL_API_URL}/fixtures/?event={gameweek['id']}") if pairs else []
+    live = fetch_json(f"{FPL_API_URL}/event/{gameweek['id']}/live/") if pairs else {}
+    duo_importance = _format_duo_importance(
+        pairs,
+        gameweek["id"],
+        bootstrap["elements"],
+        bootstrap.get("teams", []),
+        fixtures,
+        live.get("elements", []),
+        fetch_json,
+    )
+
     return {
         "league": {"id": league["id"], "name": league["name"]},
         "gameweek": {"id": gameweek["id"], "name": gameweek["name"]},
         "updatedAt": datetime.now(timezone.utc).isoformat(),
         "standings": standings,
-        "pairs": _format_pairs(standings, pairings),
+        "pairs": pairs,
+        "duoImportance": duo_importance,
     }
 
 

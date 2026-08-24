@@ -22,8 +22,8 @@
       <div class="table-wrap">
         <div class="table-toolbar">
           <div class="view-toggle" aria-label="Standings view">
-            <button id="teams-view" type="button" aria-pressed="true">Individual</button>
-            <button id="pairs-view" type="button" aria-pressed="false">Duos</button>
+            <button id="pairs-view" type="button" aria-pressed="true">Duos</button>
+            <button id="teams-view" type="button" aria-pressed="false">Individual</button>
           </div>
           <div class="refresh-group">
             <p id="last-updated" aria-live="off"></p>
@@ -49,6 +49,16 @@
           </thead>
           <tbody id="standings"></tbody>
         </table>
+      </div>
+
+      <div class="ownership-panel">
+        <div class="ownership-toolbar">
+          <h2>Relative Importance</h2>
+          <label class="duo-select-label" for="duo-importance-select">
+            <select id="duo-importance-select"></select>
+          </label>
+        </div>
+        <div id="player-ownership" class="ownership-list"></div>
       </div>
     </main>
   </body>

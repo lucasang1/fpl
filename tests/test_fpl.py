@@ -4,7 +4,9 @@ import unittest
 from pathlib import Path
 
 from services.fpl import (
+    _format_duo_importance,
     _format_pairs,
+    _format_player_ownership,
     _format_standings,
     _select_gameweek,
     update_standings,
@@ -137,6 +139,119 @@ class FormatPairsTests(unittest.TestCase):
             _format_pairs(self.teams, (("Missing pair", (1, 99)),))
 
 
+class FormatPlayerOwnershipTests(unittest.TestCase):
+    def test_counts_raw_and_effective_ownership(self):
+        entries = [{"entry": 1}, {"entry": 2}]
+        elements = [
+            {"id": 10, "web_name": "Salah"},
+            {"id": 20, "web_name": "Haaland"},
+            {"id": 30, "web_name": "Saka"},
+        ]
+
+        def fetch_json(url):
+            entry_id = int(url.split("/entry/", 1)[1].split("/", 1)[0])
+            picks_by_entry = {
+                1: [
+                    {"element": 10, "multiplier": 2},
+                    {"element": 20, "multiplier": 1},
+                    {"element": 30, "multiplier": 0},
+                ],
+                2: [
+                    {"element": 10, "multiplier": 1},
+                    {"element": 20, "multiplier": 3},
+                ],
+            }
+            return {"picks": picks_by_entry[entry_id]}
+
+        ownership = _format_player_ownership(entries, 4, elements, fetch_json)
+
+        self.assertEqual(
+            ownership,
+            [
+                {
+                    "id": 20,
+                    "name": "Haaland",
+                    "ownership": 100.0,
+                    "effectiveOwnership": 200.0,
+                },
+                {
+                    "id": 10,
+                    "name": "Salah",
+                    "ownership": 100.0,
+                    "effectiveOwnership": 150.0,
+                },
+                {
+                    "id": 30,
+                    "name": "Saka",
+                    "ownership": 50.0,
+                    "effectiveOwnership": 0.0,
+                },
+            ],
+        )
+
+
+class FormatDuoImportanceTests(unittest.TestCase):
+    def test_compares_selected_duo_exposure_against_other_duos(self):
+        pairs = [
+            {
+                "name": "Alpha & Beta",
+                "members": [{"id": 1}, {"id": 2}],
+            },
+            {
+                "name": "Gamma & Delta",
+                "members": [{"id": 3}, {"id": 4}],
+            },
+            {
+                "name": "Echo & Foxtrot",
+                "members": [{"id": 5}, {"id": 6}],
+            },
+        ]
+        elements = [
+            {"id": 10, "web_name": "Salah", "team": 20},
+            {"id": 30, "web_name": "Verbruggen", "team": 10},
+        ]
+        teams = [
+            {"id": 10, "short_name": "BHA"},
+            {"id": 20, "short_name": "LIV"},
+            {"id": 30, "short_name": "AVL"},
+            {"id": 40, "short_name": "MUN"},
+        ]
+        fixtures = [
+            {"team_h": 10, "team_a": 30, "started": True},
+            {"team_h": 20, "team_a": 40, "started": False},
+        ]
+        live_elements = [
+            {"id": 10, "stats": {"total_points": 0}},
+            {"id": 30, "stats": {"total_points": 6}},
+        ]
+        picks_by_entry = {
+            1: [{"element": 10, "multiplier": 2}, {"element": 30, "multiplier": 1}],
+            2: [{"element": 10, "multiplier": 1}],
+            3: [{"element": 10, "multiplier": 1}, {"element": 30, "multiplier": 1}],
+            4: [],
+            5: [{"element": 10, "multiplier": 0}],
+            6: [],
+        }
+
+        def fetch_json(url):
+            entry_id = int(url.split("/entry/", 1)[1].split("/", 1)[0])
+            return {"picks": picks_by_entry[entry_id]}
+
+        importance = _format_duo_importance(
+            pairs, 4, elements, teams, fixtures, live_elements, fetch_json
+        )
+
+        alpha = importance[0]["players"]
+        self.assertEqual(alpha[0]["name"], "Salah")
+        self.assertEqual(alpha[0]["opponent"], "MUN (H)")
+        self.assertEqual(alpha[0]["score"], "-")
+        self.assertEqual(alpha[0]["importance"], 250.0)
+        self.assertEqual(alpha[1]["name"], "Verbruggen")
+        self.assertEqual(alpha[1]["opponent"], "AVL (H)")
+        self.assertEqual(alpha[1]["score"], 6)
+        self.assertEqual(alpha[1]["importance"], 50.0)
+
+
 class UpdateStandingsTests(unittest.TestCase):
     def test_fetches_every_page_and_writes_the_result(self):
         requested_urls = []
@@ -145,6 +260,10 @@ class UpdateStandingsTests(unittest.TestCase):
             requested_urls.append(url)
             if url.endswith("bootstrap-static/"):
                 return {
+                    "elements": [
+                        {"id": 1, "web_name": "Player One"},
+                        {"id": 2, "web_name": "Player Two"},
+                    ],
                     "events": [
                         {
                             "id": 7,
@@ -153,6 +272,14 @@ class UpdateStandingsTests(unittest.TestCase):
                             "finished": False,
                             "is_next": False,
                         }
+                    ]
+                }
+
+            if url.endswith("/picks/"):
+                return {
+                    "picks": [
+                        {"element": 1, "multiplier": 1},
+                        {"element": 2, "multiplier": 2},
                     ]
                 }
 
@@ -188,12 +315,14 @@ class UpdateStandingsTests(unittest.TestCase):
             [team["badgeUrl"] for team in output["standings"]],
             ["https://example.com/10.png", "https://example.com/20.png"],
         )
+        self.assertEqual(output["duoImportance"], [])
         self.assertEqual(saved_output, output)
 
     def test_includes_ranked_and_new_entries(self):
         def fetch_json(url):
             if url.endswith("bootstrap-static/"):
                 return {
+                    "elements": [{"id": 1, "web_name": "Player One"}],
                     "events": [
                         {
                             "id": 1,
@@ -204,6 +333,9 @@ class UpdateStandingsTests(unittest.TestCase):
                         }
                     ]
                 }
+
+            if url.endswith("/picks/"):
+                return {"picks": [{"element": 1, "multiplier": 1}]}
 
             if "/entry/" in url:
                 return {"club_badge_src": None}

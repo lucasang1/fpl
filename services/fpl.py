@@ -2,7 +2,7 @@ import json
 from collections import defaultdict
 from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.request import Request, urlopen
@@ -11,12 +11,21 @@ from config import FPL_API_URL, HEADSHOTS, LEAGUE_ID, PAIRINGS, PUBLIC_DIR
 
 JsonObject = dict[str, Any]
 JsonFetcher = Callable[[str], JsonObject]
+FIXTURE_TIMEZONE = timezone(timedelta(hours=8))
 
 
 def _get_json(url: str) -> JsonObject:
     request = Request(url, headers={"User-Agent": "fpl-league-site"})
     with urlopen(request, timeout=20) as response:
         return json.load(response)
+
+
+def _format_fixture_time(kickoff_time: str | None) -> str:
+    if not kickoff_time:
+        return "-"
+
+    kickoff = datetime.fromisoformat(kickoff_time.replace("Z", "+00:00"))
+    return kickoff.astimezone(FIXTURE_TIMEZONE).strftime("%a %H:%M")
 
 
 def _select_gameweek(events: Iterable[JsonObject]) -> JsonObject:
@@ -183,12 +192,15 @@ def _format_duo_importance(
     for fixture in fixtures:
         home_id = fixture["team_h"]
         away_id = fixture["team_a"]
-        started = bool(fixture.get("started") or fixture.get("finished"))
+        finished = bool(fixture.get("finished") or fixture.get("finished_provisional"))
+        started = bool(fixture.get("started") or finished)
         fixtures_by_team[home_id].append(
             {
                 "opponent": team_names.get(away_id, str(away_id)),
                 "venue": "H",
                 "started": started,
+                "finished": finished,
+                "time": _format_fixture_time(fixture.get("kickoff_time")),
             }
         )
         fixtures_by_team[away_id].append(
@@ -196,6 +208,8 @@ def _format_duo_importance(
                 "opponent": team_names.get(home_id, str(home_id)),
                 "venue": "A",
                 "started": started,
+                "finished": finished,
+                "time": _format_fixture_time(fixture.get("kickoff_time")),
             }
         )
 
@@ -226,20 +240,25 @@ def _format_duo_importance(
     comparison_pairs = pair_data[:50]
     all_owned = set().union(*(pair["owned"] for pair in pair_data))
 
-    def player_context(player_id: int) -> tuple[str, int | str]:
+    def player_context(player_id: int) -> tuple[str, str, int | str]:
         player = players.get(player_id, {})
         player_fixtures = fixtures_by_team.get(player.get("team"), [])
         if not player_fixtures:
-            return "-", "-"
+            return "-", "-", "-"
 
         opponent = ", ".join(
             f'{fixture["opponent"]} ({fixture["venue"]})'
             for fixture in player_fixtures
         )
+        fixture_time = (
+            "Done"
+            if any(fixture["finished"] for fixture in player_fixtures)
+            else ", ".join(fixture["time"] for fixture in player_fixtures)
+        )
         score = live_points.get(player_id, 0) if any(
             fixture["started"] for fixture in player_fixtures
         ) else "-"
-        return opponent, score
+        return opponent, fixture_time, score
 
     importance_by_duo = []
     for selected in pair_data:
@@ -255,12 +274,13 @@ def _format_duo_importance(
                 if comparison
                 else 0
             )
-            opponent, score = player_context(player_id)
+            opponent, fixture_time, score = player_context(player_id)
             rows.append(
                 {
                     "id": player_id,
                     "name": players.get(player_id, {}).get("name", f"Player {player_id}"),
                     "opponent": opponent,
+                    "fixtureTime": fixture_time,
                     "score": score,
                     "importance": round(selected_exposure - average_exposure, 1),
                 }

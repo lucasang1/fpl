@@ -144,15 +144,17 @@ function createImportanceRow(player) {
   const row = document.createElement("div");
   const name = document.createElement("span");
   const opponent = document.createElement("span");
+  const fixtureTime = document.createElement("span");
   const score = document.createElement("span");
   const importance = document.createElement("strong");
 
   row.className = "ownership-row";
   name.textContent = player.name;
   opponent.textContent = player.opponent;
+  fixtureTime.textContent = player.fixtureTime || "-";
   score.textContent = player.score;
   importance.textContent = formatPercent(player.importance);
-  row.append(name, opponent, score, importance);
+  row.append(name, opponent, fixtureTime, score, importance);
   return row;
 }
 
@@ -200,7 +202,7 @@ function renderOwnership() {
 function createImportanceHeader() {
   const row = document.createElement("div");
   row.className = "ownership-row ownership-header";
-  for (const label of ["Player", "Opp", "Score", "Importance"]) {
+  for (const label of ["Player", "Opp", "Status", "Score", "Importance"]) {
     const cell = document.createElement("span");
     cell.textContent = label;
     row.append(cell);

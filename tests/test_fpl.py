@@ -217,8 +217,20 @@ class FormatDuoImportanceTests(unittest.TestCase):
             {"id": 40, "short_name": "MUN"},
         ]
         fixtures = [
-            {"team_h": 10, "team_a": 30, "started": True},
-            {"team_h": 20, "team_a": 40, "started": False},
+            {
+                "team_h": 10,
+                "team_a": 30,
+                "started": True,
+                "finished": True,
+                "kickoff_time": "2024-08-18T07:00:00Z",
+            },
+            {
+                "team_h": 20,
+                "team_a": 40,
+                "started": False,
+                "finished": False,
+                "kickoff_time": "2024-08-19T19:00:00Z",
+            },
         ]
         live_elements = [
             {"id": 10, "stats": {"total_points": 0}},
@@ -244,10 +256,12 @@ class FormatDuoImportanceTests(unittest.TestCase):
         alpha = importance[0]["players"]
         self.assertEqual(alpha[0]["name"], "Salah")
         self.assertEqual(alpha[0]["opponent"], "MUN (H)")
+        self.assertEqual(alpha[0]["fixtureTime"], "Tue 03:00")
         self.assertEqual(alpha[0]["score"], "-")
         self.assertEqual(alpha[0]["importance"], 250.0)
         self.assertEqual(alpha[1]["name"], "Verbruggen")
         self.assertEqual(alpha[1]["opponent"], "AVL (H)")
+        self.assertEqual(alpha[1]["fixtureTime"], "Done")
         self.assertEqual(alpha[1]["score"], 6)
         self.assertEqual(alpha[1]["importance"], 50.0)
 

@@ -301,11 +301,32 @@ class FormatDuoImportanceTests(unittest.TestCase):
         self.assertEqual(alpha[0]["fixtureTime"], "Tue 03:00")
         self.assertEqual(alpha[0]["score"], "-")
         self.assertEqual(alpha[0]["importance"], 250.0)
+        self.assertEqual(
+            alpha[0]["teams"],
+            {
+                "started": [
+                    {"name": "Team 1", "captain": True},
+                    {"name": "Team 2", "captain": False},
+                    {"name": "Team 3", "captain": False},
+                ],
+                "benched": [{"name": "Team 5"}],
+            },
+        )
         self.assertEqual(alpha[1]["name"], "Verbruggen")
         self.assertEqual(alpha[1]["opponent"], "AVL (H)")
         self.assertEqual(alpha[1]["fixtureTime"], "Done")
         self.assertEqual(alpha[1]["score"], 6)
         self.assertEqual(alpha[1]["importance"], 50.0)
+        self.assertEqual(
+            alpha[1]["teams"],
+            {
+                "started": [
+                    {"name": "Team 1", "captain": False},
+                    {"name": "Team 3", "captain": False},
+                ],
+                "benched": [],
+            },
+        )
 
 
 class UpdateStandingsTests(unittest.TestCase):

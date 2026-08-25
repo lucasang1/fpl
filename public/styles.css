@@ -374,6 +374,29 @@ a:hover { color: #5f5f5f; }
   white-space: nowrap;
 }
 
+.importance-player-button {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  color: #242424;
+  background: transparent;
+  font: inherit;
+  font-weight: 750;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.importance-player-button:hover,
+.importance-player-button:focus-visible {
+  color: #5f5f5f;
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .ownership-row strong {
   flex: 0 0 auto;
   font-size: .78rem;
@@ -399,6 +422,109 @@ a:hover { color: #5f5f5f; }
 
 .ownership-header span:nth-child(5) {
   text-align: right;
+}
+
+.importance-dialog {
+  position: fixed;
+  right: auto;
+  bottom: auto;
+  width: min(280px, calc(100vw - 24px));
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e3e3e3;
+  border-radius: 10px;
+  color: #242424;
+  background: white;
+  box-shadow: 0 14px 40px rgb(0 0 0 / 18%);
+}
+
+.importance-dialog::backdrop {
+  background: rgb(0 0 0 / 8%);
+}
+
+.importance-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 10px 1px;
+  border-bottom: 1px solid #ededed;
+}
+
+.importance-dialog h3 {
+  margin: 0;
+  overflow: hidden;
+  font-size: .75rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.importance-dialog-close {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: #242424;
+  background: transparent;
+}
+
+.importance-dialog-close:hover,
+.importance-dialog-close:focus-visible {
+  color: #5f5f5f;
+  background: transparent;
+}
+
+.importance-dialog-close svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.importance-dialog-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.importance-dialog-body h4 {
+  margin: 0 0 6px;
+  color: #666;
+  font-size: .82rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.importance-dialog-body ul,
+.importance-dialog-body p {
+  margin: 0;
+  padding: 0;
+}
+
+.importance-dialog-body ul {
+  display: grid;
+  gap: 5px;
+  list-style: none;
+}
+
+.importance-dialog-body li,
+.importance-dialog-body p {
+  color: #242424;
+  font-size: .82rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.importance-dialog-body p {
+  color: #777;
 }
 
 @media (max-width: 700px) {
@@ -540,6 +666,12 @@ a:hover { color: #5f5f5f; }
 
   .ownership-row {
     padding: 5px 0;
+    font-size: .62rem;
+  }
+
+  .importance-dialog-body li,
+  .importance-dialog-body h4,
+  .importance-dialog-body p {
     font-size: .62rem;
   }
 

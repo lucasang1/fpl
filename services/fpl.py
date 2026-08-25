@@ -256,6 +256,29 @@ def _format_duo_importance(
             pick_cache[entry_id] = data.get("picks", [])
         return pick_cache[entry_id]
 
+    player_team_breakdown: dict[int, JsonObject] = defaultdict(
+        lambda: {"started": [], "benched": []}
+    )
+    seen_entries: set[int] = set()
+    for pair in pairs:
+        for member in pair["members"]:
+            entry_id = member["id"]
+            if entry_id in seen_entries:
+                continue
+            seen_entries.add(entry_id)
+            team_name = member.get("team") or member.get("manager") or f"Team {entry_id}"
+            for pick in picks_for_entry(entry_id):
+                player_id = pick["element"]
+                multiplier = pick.get("multiplier", 0)
+                if multiplier > 0:
+                    player_team_breakdown[player_id]["started"].append(
+                        {"name": team_name, "captain": multiplier > 1}
+                    )
+                else:
+                    player_team_breakdown[player_id]["benched"].append(
+                        {"name": team_name}
+                    )
+
     pair_data = []
     for pair in pairs:
         owned: set[int] = set()
@@ -313,6 +336,9 @@ def _format_duo_importance(
                     "fixtureTime": fixture_time,
                     "score": score,
                     "importance": round(selected_exposure - average_exposure, 1),
+                    "teams": player_team_breakdown.get(
+                        player_id, {"started": [], "benched": []}
+                    ),
                 }
             )
 

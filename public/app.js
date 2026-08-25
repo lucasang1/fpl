@@ -9,10 +9,15 @@ const standingsCard = document.querySelector(".table-wrap");
 const ownershipPanel = document.querySelector(".ownership-panel");
 const playerOwnership = document.querySelector("#player-ownership");
 const duoImportanceSelect = document.querySelector("#duo-importance-select");
+const importanceDialog = document.querySelector("#importance-dialog");
+const importanceDialogTitle = document.querySelector("#importance-dialog-title");
+const importanceDialogBody = document.querySelector("#importance-dialog-body");
+const importanceDialogClose = document.querySelector("#importance-dialog-close");
 let standingsData;
 let activeView = "pairs";
 let activeDuoImportanceName = "";
 let updatedAt;
+let activeImportanceAnchor;
 const desktopLayout = window.matchMedia("(min-width: 901px)");
 
 function formatTimeAgo(date) {
@@ -199,15 +204,87 @@ function formatPercent(value) {
   return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
 }
 
+function formatTeamPick(team) {
+  return `${team.name}${team.captain ? " (C)" : ""}`;
+}
+
+function createTeamPickSection(title, teams) {
+  const section = document.createElement("section");
+  const heading = document.createElement("h4");
+  heading.textContent = title;
+  section.append(heading);
+
+  if (!teams.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "None";
+    section.append(empty);
+    return section;
+  }
+
+  const list = document.createElement("ul");
+  for (const team of teams) {
+    const item = document.createElement("li");
+    item.textContent = formatTeamPick(team);
+    list.append(item);
+  }
+  section.append(list);
+  return section;
+}
+
+function positionImportanceDialog(anchor) {
+  if (!importanceDialog?.open || !anchor) return;
+
+  const spacing = 8;
+  const viewportPadding = 12;
+  const anchorRect = anchor.getBoundingClientRect();
+  const dialogWidth = importanceDialog.offsetWidth;
+  const dialogHeight = importanceDialog.offsetHeight;
+  const maxLeft = window.innerWidth - dialogWidth - viewportPadding;
+  const maxTop = window.innerHeight - dialogHeight - viewportPadding;
+  const left = Math.max(
+    viewportPadding,
+    Math.min(anchorRect.right + spacing, maxLeft),
+  );
+  const top = Math.max(
+    viewportPadding,
+    Math.min(anchorRect.top - spacing, maxTop),
+  );
+
+  importanceDialog.style.left = `${left}px`;
+  importanceDialog.style.top = `${top}px`;
+}
+
+function openImportanceDialog(player, anchor) {
+  const teams = player.teams || {};
+  activeImportanceAnchor = anchor;
+  importanceDialogTitle.textContent = player.name;
+  importanceDialogBody.replaceChildren(
+    createTeamPickSection("Started", teams.started || []),
+    createTeamPickSection("Benched", teams.benched || []),
+  );
+
+  if (!importanceDialog.open) {
+    importanceDialog.showModal();
+  }
+  positionImportanceDialog(anchor);
+}
+
+function closeImportanceDialog() {
+  if (importanceDialog?.open) importanceDialog.close();
+  activeImportanceAnchor = undefined;
+}
+
 function createImportanceRow(player) {
   const row = document.createElement("div");
-  const name = document.createElement("span");
+  const name = document.createElement("button");
   const opponent = document.createElement("span");
   const fixtureTime = document.createElement("span");
   const score = document.createElement("span");
   const importance = document.createElement("strong");
 
   row.className = "ownership-row";
+  name.className = "importance-player-button";
+  name.type = "button";
   name.textContent = player.name;
   opponent.textContent = player.opponent;
   fixtureTime.textContent = player.fixtureTime || "-";
@@ -217,6 +294,7 @@ function createImportanceRow(player) {
     name.classList.add("negative-importance");
     importance.classList.add("negative-importance");
   }
+  name.addEventListener("click", () => openImportanceDialog(player, name));
   row.append(name, opponent, fixtureTime, score, importance);
   return row;
 }
@@ -234,6 +312,7 @@ function renderActiveView() {
 
 function renderOwnership() {
   if (!standingsData) return;
+  closeImportanceDialog();
   const duoImportance = standingsData.duoImportance || [];
   if (!duoImportance.length) {
     duoImportanceSelect.replaceChildren();
@@ -320,6 +399,14 @@ duoImportanceSelect.addEventListener("change", () => {
   activeDuoImportanceName = duoImportanceSelect.value;
   renderOwnership();
 });
+importanceDialogClose.addEventListener("click", closeImportanceDialog);
+importanceDialog.addEventListener("click", (event) => {
+  if (event.target === importanceDialog) closeImportanceDialog();
+});
+importanceDialog.addEventListener("close", () => {
+  activeImportanceAnchor = undefined;
+});
+window.addEventListener("resize", () => positionImportanceDialog(activeImportanceAnchor));
 desktopLayout.addEventListener("change", syncOwnershipHeight);
 if (standingsCard) {
   new ResizeObserver(syncOwnershipHeight).observe(standingsCard);

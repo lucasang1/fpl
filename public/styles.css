@@ -186,7 +186,28 @@ a:hover { color: #5f5f5f; }
   max-width: 100%;
 }
 
-.team-link span { overflow-wrap: anywhere; }
+.team-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.chip-pill {
+  flex: 0 0 auto;
+  min-width: 2.35em;
+  padding: 1px 6px;
+  border: 1px solid #111;
+  border-radius: 999px;
+  color: #111;
+  background: white;
+  font-size: .68rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+  text-decoration: none;
+}
 
 .team-badge {
   width: 32px;
@@ -398,10 +419,21 @@ a:hover { color: #5f5f5f; }
 
   .manager { gap: 4px; }
 
-  .team-link span {
+  .team-name {
+    gap: 3px;
+  }
+
+  .team-name > span:first-child {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .chip-pill {
+    min-width: 2em;
+    padding: 0 4px;
+    font-size: .5rem;
+    line-height: 1.3;
   }
 
   .team-badge {
@@ -453,7 +485,7 @@ a:hover { color: #5f5f5f; }
 
   .ownership-list {
     --ownership-column-gap: 6px;
-    --ownership-columns: minmax(62px, 1fr) minmax(3ch, max-content) minmax(6ch, max-content) minmax(5ch, max-content) minmax(10ch, max-content);
+    --ownership-columns: minmax(62px, 1fr) minmax(3ch, max-content) minmax(6ch, max-content) minmax(5ch, max-content) minmax(6ch, max-content);
   }
 
   .ownership-row strong { font-size: .6rem; }

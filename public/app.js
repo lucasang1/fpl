@@ -69,9 +69,20 @@ function createTeamLink(team) {
     link.append(createFallbackBadge(team.team));
   }
 
+  const teamNameGroup = document.createElement("span");
   const teamName = document.createElement("span");
+  teamNameGroup.className = "team-name";
   teamName.textContent = team.team;
-  link.append(teamName);
+  teamNameGroup.append(teamName);
+
+  if (team.chip) {
+    const chip = document.createElement("span");
+    chip.className = "chip-pill";
+    chip.textContent = team.chip;
+    teamNameGroup.append(chip);
+  }
+
+  link.append(teamNameGroup);
   return link;
 }
 
@@ -116,14 +127,16 @@ function createPairRow(pair) {
   const row = document.createElement("tr");
   const teamCell = document.createElement("td");
   const managerCell = document.createElement("td");
+  const teamsById = new Map((standingsData?.standings || []).map((team) => [team.id, team]));
 
   teamCell.className = "pair-members";
   managerCell.className = "pair-members";
   teamCell.dataset.label = "Teams";
   managerCell.dataset.label = "Managers";
   for (const member of pair.members) {
-    teamCell.append(createTeamLink(member));
-    managerCell.append(createManager(member));
+    const team = { ...member, ...teamsById.get(member.id) };
+    teamCell.append(createTeamLink(team));
+    managerCell.append(createManager(team));
   }
 
   row.append(

@@ -12,6 +12,12 @@ from config import FPL_API_URL, HEADSHOTS, LEAGUE_ID, PAIRINGS, PUBLIC_DIR
 JsonObject = dict[str, Any]
 JsonFetcher = Callable[[str], JsonObject]
 FIXTURE_TIMEZONE = timezone(timedelta(hours=8))
+CHIP_LABELS = {
+    "bboost": "BB",
+    "3xc": "TC",
+    "freehit": "FH",
+    "wildcard": "WC",
+}
 
 
 def _get_json(url: str) -> JsonObject:
@@ -97,6 +103,30 @@ def _fetch_badges(
             entry_id: badge_url
             for entry_id, badge_url in executor.map(fetch_badge, entries)
             if badge_url is not None
+        }
+
+
+def _fetch_chips(
+    entries: Iterable[JsonObject], gameweek_id: int, fetch_json: JsonFetcher
+) -> dict[int, str]:
+    def fetch_chip(entry: JsonObject) -> tuple[int, str | None]:
+        entry_id = entry["entry"]
+        try:
+            data = fetch_json(f"{FPL_API_URL}/entry/{entry_id}/event/{gameweek_id}/picks/")
+        except Exception:
+            return entry_id, None
+
+        chip = data.get("active_chip")
+        return entry_id, CHIP_LABELS.get(chip)
+
+    entries = list(entries)
+    if not entries:
+        return {}
+    with ThreadPoolExecutor(max_workers=min(8, len(entries))) as executor:
+        return {
+            entry_id: chip
+            for entry_id, chip in executor.map(fetch_chip, entries)
+            if chip is not None
         }
 
 
@@ -296,8 +326,10 @@ def _format_standings(
     entries: Iterable[JsonObject],
     gameweek_id: int,
     badges: dict[int, str] | None = None,
+    chips: dict[int, str] | None = None,
 ) -> list[JsonObject]:
     badges = badges or {}
+    chips = chips or {}
     standings = []
     for entry in entries:
         is_ranked = "rank" in entry
@@ -317,6 +349,7 @@ def _format_standings(
                 "url": _team_url(entry["entry"], gameweek_id),
                 "badgeUrl": badges.get(entry["entry"]),
                 "headshotUrl": HEADSHOTS.get(entry["entry"]),
+                "chip": chips.get(entry["entry"]),
             }
         )
     return standings
@@ -391,7 +424,8 @@ def fetch_standings(
     gameweek = _select_gameweek(bootstrap["events"])
     league, entries = _fetch_league(fetch_json)
     badges = _fetch_badges(entries, fetch_json)
-    standings = _format_standings(entries, gameweek["id"], badges)
+    chips = _fetch_chips(entries, gameweek["id"], fetch_json)
+    standings = _format_standings(entries, gameweek["id"], badges, chips)
     pairs = _format_pairs(standings, pairings)
     fixtures = fetch_json(f"{FPL_API_URL}/fixtures/?event={gameweek['id']}") if pairs else []
     live = fetch_json(f"{FPL_API_URL}/event/{gameweek['id']}/live/") if pairs else {}

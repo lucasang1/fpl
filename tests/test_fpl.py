@@ -8,6 +8,7 @@ from services.fpl import (
     _format_pairs,
     _format_player_ownership,
     _format_standings,
+    _fetch_chips,
     _select_gameweek,
     update_standings,
 )
@@ -61,6 +62,7 @@ class FormatStandingsTests(unittest.TestCase):
                     "url": "https://fantasy.premierleague.com/entry/42/event/3",
                     "badgeUrl": None,
                     "headshotUrl": None,
+                    "chip": None,
                 }
             ],
         )
@@ -93,6 +95,41 @@ class FormatStandingsTests(unittest.TestCase):
 
         self.assertEqual(standings[0]["headshotUrl"], "/headshots/lucas.png")
 
+    def test_includes_chip_label(self):
+        entries = [
+            {
+                "entry": 42,
+                "entry_name": "Triple team",
+                "player_first_name": "Ada",
+                "player_last_name": "Lovelace",
+            }
+        ]
+
+        standings = _format_standings(entries, 3, chips={42: "TC"})
+
+        self.assertEqual(standings[0]["chip"], "TC")
+
+
+class FetchChipsTests(unittest.TestCase):
+    def test_maps_active_chips_to_short_labels(self):
+        entries = [{"entry": 1}, {"entry": 2}, {"entry": 3}, {"entry": 4}, {"entry": 5}]
+        chips_by_entry = {
+            1: "bboost",
+            2: "3xc",
+            3: "freehit",
+            4: "wildcard",
+            5: None,
+        }
+
+        def fetch_json(url):
+            entry_id = int(url.split("/entry/", 1)[1].split("/", 1)[0])
+            return {"active_chip": chips_by_entry[entry_id]}
+
+        self.assertEqual(
+            _fetch_chips(entries, 6, fetch_json),
+            {1: "BB", 2: "TC", 3: "FH", 4: "WC"},
+        )
+
 
 class FormatPairsTests(unittest.TestCase):
     def setUp(self):
@@ -103,6 +140,7 @@ class FormatPairsTests(unittest.TestCase):
                 "manager": "One",
                 "gameweekPoints": 10,
                 "totalPoints": 100,
+                "chip": "BB",
             },
             {
                 "id": 2,
@@ -110,6 +148,7 @@ class FormatPairsTests(unittest.TestCase):
                 "manager": "Two",
                 "gameweekPoints": 20,
                 "totalPoints": 200,
+                "chip": None,
             },
             {
                 "id": 3,
@@ -117,6 +156,7 @@ class FormatPairsTests(unittest.TestCase):
                 "manager": "Mau",
                 "gameweekPoints": 12,
                 "totalPoints": 120,
+                "chip": "TC",
             },
         ]
 
@@ -133,6 +173,8 @@ class FormatPairsTests(unittest.TestCase):
         self.assertEqual(pairs[1]["gameweekPoints"], 24)
         self.assertEqual(pairs[1]["totalPoints"], 240)
         self.assertEqual([member["id"] for member in pairs[1]["members"]], [3, 3])
+        self.assertEqual([member["chip"] for member in pairs[0]["members"]], ["BB", None])
+        self.assertEqual([member["chip"] for member in pairs[1]["members"]], ["TC", "TC"])
 
     def test_rejects_a_missing_configured_team(self):
         with self.assertRaisesRegex(RuntimeError, "missing FPL entry 99"):
@@ -323,7 +365,7 @@ class UpdateStandingsTests(unittest.TestCase):
             )
             saved_output = json.loads(destination.read_text(encoding="utf-8"))
 
-        self.assertEqual(len(requested_urls), 5)
+        self.assertEqual(len(requested_urls), 7)
         self.assertEqual([team["rank"] for team in output["standings"]], [1, 2])
         self.assertEqual(
             [team["badgeUrl"] for team in output["standings"]],

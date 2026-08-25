@@ -308,10 +308,10 @@ def _format_duo_importance(
             if any(fixture["finished"] for fixture in player_fixtures)
             else ", ".join(fixture["time"] for fixture in player_fixtures)
         )
-        score = live_points.get(player_id, 0) if any(
+        points = live_points.get(player_id, 0) if any(
             fixture["started"] for fixture in player_fixtures
         ) else "-"
-        return opponent, fixture_time, score
+        return opponent, fixture_time, points
 
     importance_by_duo = []
     for selected in pair_data:
@@ -327,14 +327,14 @@ def _format_duo_importance(
                 if comparison
                 else 0
             )
-            opponent, fixture_time, score = player_context(player_id)
+            opponent, fixture_time, points = player_context(player_id)
             rows.append(
                 {
                     "id": player_id,
                     "name": players.get(player_id, {}).get("name", f"Player {player_id}"),
                     "opponent": opponent,
                     "fixtureTime": fixture_time,
-                    "score": score,
+                    "points": points,
                     "importance": round(selected_exposure - average_exposure, 1),
                     "teams": player_team_breakdown.get(
                         player_id, {"started": [], "benched": []}

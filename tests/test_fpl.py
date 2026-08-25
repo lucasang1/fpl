@@ -160,7 +160,7 @@ class FormatPairsTests(unittest.TestCase):
             },
         ]
 
-    def test_combines_scores_and_ranks_pairs(self):
+    def test_combines_points_and_ranks_pairs(self):
         pairs = _format_pairs(
             self.teams,
             (("Alpha & Beta", (1, 2)), ("Mau", (3, 3))),
@@ -299,7 +299,7 @@ class FormatDuoImportanceTests(unittest.TestCase):
         self.assertEqual(alpha[0]["name"], "Salah")
         self.assertEqual(alpha[0]["opponent"], "MUN (H)")
         self.assertEqual(alpha[0]["fixtureTime"], "Tue 03:00")
-        self.assertEqual(alpha[0]["score"], "-")
+        self.assertEqual(alpha[0]["points"], "-")
         self.assertEqual(alpha[0]["importance"], 250.0)
         self.assertEqual(
             alpha[0]["teams"],
@@ -315,7 +315,7 @@ class FormatDuoImportanceTests(unittest.TestCase):
         self.assertEqual(alpha[1]["name"], "Verbruggen")
         self.assertEqual(alpha[1]["opponent"], "AVL (H)")
         self.assertEqual(alpha[1]["fixtureTime"], "Done")
-        self.assertEqual(alpha[1]["score"], 6)
+        self.assertEqual(alpha[1]["points"], 6)
         self.assertEqual(alpha[1]["importance"], 50.0)
         self.assertEqual(
             alpha[1]["teams"],

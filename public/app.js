@@ -279,7 +279,7 @@ function createImportanceRow(player) {
   const name = document.createElement("button");
   const opponent = document.createElement("span");
   const fixtureTime = document.createElement("span");
-  const score = document.createElement("span");
+  const points = document.createElement("span");
   const importance = document.createElement("strong");
 
   row.className = "ownership-row";
@@ -288,14 +288,14 @@ function createImportanceRow(player) {
   name.textContent = player.name;
   opponent.textContent = player.opponent;
   fixtureTime.textContent = player.fixtureTime || "-";
-  score.textContent = player.score;
+  points.textContent = player.points;
   importance.textContent = formatPercent(player.importance);
   if (player.importance < 0) {
     name.classList.add("negative-importance");
     importance.classList.add("negative-importance");
   }
   name.addEventListener("click", () => openImportanceDialog(player, name));
-  row.append(name, opponent, fixtureTime, score, importance);
+  row.append(name, opponent, fixtureTime, points, importance);
   return row;
 }
 
@@ -349,7 +349,7 @@ function renderOwnership() {
 function createImportanceHeader() {
   const row = document.createElement("div");
   row.className = "ownership-row ownership-header";
-  for (const label of ["Player", "Opp", "Status", "Score", "Importance"]) {
+  for (const label of ["Player", "Opp", "Status", "Points", "Importance"]) {
     const cell = document.createElement("span");
     cell.textContent = label;
     row.append(cell);

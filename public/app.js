@@ -7,6 +7,13 @@ const pairsViewButton = document.querySelector("#pairs-view");
 const teamsViewButton = document.querySelector("#teams-view");
 const playerOwnership = document.querySelector("#player-ownership");
 const duoImportanceSelect = document.querySelector("#duo-importance-select");
+const duoHeadshots = {
+  "Luc & Josh": "/duo%20headshots/luc%20josh.png",
+  "Praeman & Ding": "/duo%20headshots/ding%20pman.png",
+  "Wob & Syuaib": "/duo%20headshots/syuaib%20wob.png",
+  "Isaac & Chia Yin": "/duo%20headshots/chiayin%20isaac.png",
+  "Mau & Mau": "/duo%20headshots/mau.png",
+};
 let standingsData;
 let activeView = "pairs";
 let activeDuoImportanceName = "";
@@ -123,6 +130,18 @@ function createTeamRow(team) {
   return row;
 }
 
+function createDuoHeadshot(pair) {
+  const src = duoHeadshots[pair.name];
+  if (!src) return null;
+
+  const image = document.createElement("img");
+  image.src = src;
+  image.alt = pair.name;
+  image.className = "duo-headshot";
+  image.loading = "lazy";
+  return image;
+}
+
 function createPairRow(pair) {
   const row = document.createElement("tr");
   const teamCell = document.createElement("td");
@@ -136,7 +155,17 @@ function createPairRow(pair) {
   for (const member of pair.members) {
     const team = { ...member, ...teamsById.get(member.id) };
     teamCell.append(createTeamLink(team));
-    managerCell.append(createManager(team));
+  }
+
+  const duoHeadshot = createDuoHeadshot(pair);
+  if (duoHeadshot) {
+    managerCell.classList.add("duo-headshot-cell");
+    managerCell.append(duoHeadshot);
+  } else {
+    for (const member of pair.members) {
+      const team = { ...member, ...teamsById.get(member.id) };
+      managerCell.append(createManager(team));
+    }
   }
 
   row.append(

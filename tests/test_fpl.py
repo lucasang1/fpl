@@ -163,10 +163,10 @@ class FormatPairsTests(unittest.TestCase):
     def test_combines_scores_and_ranks_pairs(self):
         pairs = _format_pairs(
             self.teams,
-            (("Alpha & Beta", (1, 2)), ("Mau & Mau", (3, 3))),
+            (("Alpha & Beta", (1, 2)), ("Mau", (3, 3))),
         )
 
-        self.assertEqual([pair["name"] for pair in pairs], ["Alpha & Beta", "Mau & Mau"])
+        self.assertEqual([pair["name"] for pair in pairs], ["Alpha & Beta", "Mau"])
         self.assertEqual([pair["rank"] for pair in pairs], [1, 2])
         self.assertEqual(pairs[0]["gameweekPoints"], 30)
         self.assertEqual(pairs[0]["totalPoints"], 300)

@@ -213,6 +213,10 @@ function createImportanceRow(player) {
   fixtureTime.textContent = player.fixtureTime || "-";
   score.textContent = player.score;
   importance.textContent = formatPercent(player.importance);
+  if (player.importance < 0) {
+    name.classList.add("negative-importance");
+    importance.classList.add("negative-importance");
+  }
   row.append(name, opponent, fixtureTime, score, importance);
   return row;
 }

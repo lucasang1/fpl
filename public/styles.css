@@ -474,7 +474,7 @@ a:hover { color: #5f5f5f; }
   }
 
   .duo-select-label select {
-    width: min(38vw, 132px);
+    width: min(38vw, 120px);
     max-width: 100%;
     padding: 5px 7px;
   }

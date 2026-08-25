@@ -5,6 +5,8 @@ const refreshButton = document.querySelector("#refresh");
 const lastUpdated = document.querySelector("#last-updated");
 const pairsViewButton = document.querySelector("#pairs-view");
 const teamsViewButton = document.querySelector("#teams-view");
+const standingsCard = document.querySelector(".table-wrap");
+const ownershipPanel = document.querySelector(".ownership-panel");
 const playerOwnership = document.querySelector("#player-ownership");
 const duoImportanceSelect = document.querySelector("#duo-importance-select");
 const duoHeadshots = {
@@ -18,6 +20,7 @@ let standingsData;
 let activeView = "pairs";
 let activeDuoImportanceName = "";
 let updatedAt;
+const desktopLayout = window.matchMedia("(min-width: 901px)");
 
 function formatTimeAgo(date) {
   const elapsedSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
@@ -34,6 +37,17 @@ function formatTimeAgo(date) {
 
 function renderLastUpdated() {
   lastUpdated.textContent = updatedAt ? `Last updated ${formatTimeAgo(updatedAt)}` : "";
+}
+
+function syncOwnershipHeight() {
+  if (!standingsCard || !ownershipPanel) return;
+
+  if (!desktopLayout.matches) {
+    ownershipPanel.style.maxHeight = "";
+    return;
+  }
+
+  ownershipPanel.style.maxHeight = `${standingsCard.getBoundingClientRect().height}px`;
 }
 
 function createCell(value, className, label) {
@@ -208,6 +222,7 @@ function renderActiveView() {
   tbody.replaceChildren(
     ...(isPairs ? standingsData.pairs.map(createPairRow) : standingsData.standings.map(createTeamRow)),
   );
+  syncOwnershipHeight();
 }
 
 function renderOwnership() {
@@ -242,6 +257,7 @@ function renderOwnership() {
     createImportanceHeader(),
     ...players.map(createImportanceRow),
   );
+  syncOwnershipHeight();
 }
 
 function createImportanceHeader() {
@@ -297,5 +313,9 @@ duoImportanceSelect.addEventListener("change", () => {
   activeDuoImportanceName = duoImportanceSelect.value;
   renderOwnership();
 });
+desktopLayout.addEventListener("change", syncOwnershipHeight);
+if (standingsCard) {
+  new ResizeObserver(syncOwnershipHeight).observe(standingsCard);
+}
 setInterval(renderLastUpdated, 30_000);
 loadStandings();

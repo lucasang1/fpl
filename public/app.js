@@ -349,7 +349,7 @@ function renderOwnership() {
 function createImportanceHeader() {
   const row = document.createElement("div");
   row.className = "ownership-row ownership-header";
-  for (const label of ["Player", "Opp", "Status", "Points", "Importance"]) {
+  for (const label of ["Player", "Opp", "Status", "Pts", "Importance"]) {
     const cell = document.createElement("span");
     cell.textContent = label;
     row.append(cell);

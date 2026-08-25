@@ -292,6 +292,14 @@ a:hover { color: #5f5f5f; }
 
 .pair-members > * + * { margin-top: 8px; }
 
+.pair-member-placeholder {
+  visibility: hidden;
+}
+
+.pair-members-centered > :not(.pair-member-placeholder) {
+  transform: translateY(20px);
+}
+
 .duo-headshot-cell {
   overflow: visible;
   padding: 0;
@@ -509,6 +517,9 @@ a:hover { color: #5f5f5f; }
 
   .pair-members > * { min-height: 20px; }
   .pair-members > * + * { margin-top: 4px; }
+  .pair-members-centered > :not(.pair-member-placeholder) {
+    transform: translateY(12px);
+  }
 
   .duo-headshot {
     top: auto;

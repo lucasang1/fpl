@@ -156,13 +156,11 @@ function createDuoHeadshot(pair) {
   return image;
 }
 
-function uniquePairMembers(pair) {
-  const seenIds = new Set();
-  return pair.members.filter((member) => {
-    if (seenIds.has(member.id)) return false;
-    seenIds.add(member.id);
-    return true;
-  });
+function createPairMemberPlaceholder() {
+  const placeholder = document.createElement("span");
+  placeholder.className = "pair-member-placeholder";
+  placeholder.setAttribute("aria-hidden", "true");
+  return placeholder;
 }
 
 function createPairRow(pair) {
@@ -170,13 +168,23 @@ function createPairRow(pair) {
   const teamCell = document.createElement("td");
   const managerCell = document.createElement("td");
   const teamsById = new Map((standingsData?.standings || []).map((team) => [team.id, team]));
-  const displayMembers = uniquePairMembers(pair);
+  const seenMemberIds = new Set();
+  const hasDuplicateMembers = new Set(pair.members.map((member) => member.id)).size < pair.members.length;
 
   teamCell.className = "pair-members";
   managerCell.className = "pair-members";
+  if (hasDuplicateMembers) {
+    teamCell.classList.add("pair-members-centered");
+  }
   teamCell.dataset.label = "Teams";
   managerCell.dataset.label = "Managers";
-  for (const member of displayMembers) {
+  for (const member of pair.members) {
+    if (seenMemberIds.has(member.id)) {
+      teamCell.append(createPairMemberPlaceholder());
+      continue;
+    }
+
+    seenMemberIds.add(member.id);
     const team = { ...member, ...teamsById.get(member.id) };
     teamCell.append(createTeamLink(team));
   }
@@ -186,7 +194,17 @@ function createPairRow(pair) {
     managerCell.classList.add("duo-headshot-cell");
     managerCell.append(duoHeadshot);
   } else {
-    for (const member of displayMembers) {
+    if (hasDuplicateMembers) {
+      managerCell.classList.add("pair-members-centered");
+    }
+    seenMemberIds.clear();
+    for (const member of pair.members) {
+      if (seenMemberIds.has(member.id)) {
+        managerCell.append(createPairMemberPlaceholder());
+        continue;
+      }
+
+      seenMemberIds.add(member.id);
       const team = { ...member, ...teamsById.get(member.id) };
       managerCell.append(createManager(team));
     }

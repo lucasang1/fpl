@@ -156,17 +156,27 @@ function createDuoHeadshot(pair) {
   return image;
 }
 
+function uniquePairMembers(pair) {
+  const seenIds = new Set();
+  return pair.members.filter((member) => {
+    if (seenIds.has(member.id)) return false;
+    seenIds.add(member.id);
+    return true;
+  });
+}
+
 function createPairRow(pair) {
   const row = document.createElement("tr");
   const teamCell = document.createElement("td");
   const managerCell = document.createElement("td");
   const teamsById = new Map((standingsData?.standings || []).map((team) => [team.id, team]));
+  const displayMembers = uniquePairMembers(pair);
 
   teamCell.className = "pair-members";
   managerCell.className = "pair-members";
   teamCell.dataset.label = "Teams";
   managerCell.dataset.label = "Managers";
-  for (const member of pair.members) {
+  for (const member of displayMembers) {
     const team = { ...member, ...teamsById.get(member.id) };
     teamCell.append(createTeamLink(team));
   }
@@ -176,7 +186,7 @@ function createPairRow(pair) {
     managerCell.classList.add("duo-headshot-cell");
     managerCell.append(duoHeadshot);
   } else {
-    for (const member of pair.members) {
+    for (const member of displayMembers) {
       const team = { ...member, ...teamsById.get(member.id) };
       managerCell.append(createManager(team));
     }

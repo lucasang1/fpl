@@ -9,13 +9,6 @@ const standingsCard = document.querySelector(".table-wrap");
 const ownershipPanel = document.querySelector(".ownership-panel");
 const playerOwnership = document.querySelector("#player-ownership");
 const duoImportanceSelect = document.querySelector("#duo-importance-select");
-const duoHeadshots = {
-  "Luc & Josh": "/duo%20headshots/luc%20josh.png",
-  "Praeman & Ding": "/duo%20headshots/ding%20pman.png",
-  "Wob & Syuaib": "/duo%20headshots/syuaib%20wob.png",
-  "Isaac & Chia Yin": "/duo%20headshots/chiayin%20isaac.png",
-  "Mau & Mau": "/duo%20headshots/mau.png",
-};
 let standingsData;
 let activeView = "pairs";
 let activeDuoImportanceName = "";
@@ -144,18 +137,6 @@ function createTeamRow(team) {
   return row;
 }
 
-function createDuoHeadshot(pair) {
-  const src = duoHeadshots[pair.name];
-  if (!src) return null;
-
-  const image = document.createElement("img");
-  image.src = src;
-  image.alt = pair.name;
-  image.className = "duo-headshot";
-  image.loading = "lazy";
-  return image;
-}
-
 function createPairMemberPlaceholder() {
   const placeholder = document.createElement("span");
   placeholder.className = "pair-member-placeholder";
@@ -189,25 +170,19 @@ function createPairRow(pair) {
     teamCell.append(createTeamLink(team));
   }
 
-  const duoHeadshot = createDuoHeadshot(pair);
-  if (duoHeadshot) {
-    managerCell.classList.add("duo-headshot-cell");
-    managerCell.append(duoHeadshot);
-  } else {
-    if (hasDuplicateMembers) {
-      managerCell.classList.add("pair-members-centered");
+  if (hasDuplicateMembers) {
+    managerCell.classList.add("pair-members-centered");
+  }
+  seenMemberIds.clear();
+  for (const member of pair.members) {
+    if (seenMemberIds.has(member.id)) {
+      managerCell.append(createPairMemberPlaceholder());
+      continue;
     }
-    seenMemberIds.clear();
-    for (const member of pair.members) {
-      if (seenMemberIds.has(member.id)) {
-        managerCell.append(createPairMemberPlaceholder());
-        continue;
-      }
 
-      seenMemberIds.add(member.id);
-      const team = { ...member, ...teamsById.get(member.id) };
-      managerCell.append(createManager(team));
-    }
+    seenMemberIds.add(member.id);
+    const team = { ...member, ...teamsById.get(member.id) };
+    managerCell.append(createManager(team));
   }
 
   row.append(

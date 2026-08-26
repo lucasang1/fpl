@@ -7,12 +7,57 @@ from services.fpl import (
     _format_duo_importance,
     _format_pairs,
     _format_player_ownership,
+    _format_point_details,
     _format_standings,
     _format_team_details,
     _fetch_chips,
     _select_gameweek,
     update_standings,
 )
+
+
+class FormatPointDetailsTests(unittest.TestCase):
+    def test_formats_explained_points_and_zero_defensive_progress(self):
+        live_element = {
+            "stats": {
+                "played": True,
+                "defensive_contribution": 5,
+                "bps": 37,
+                "total_points": 11,
+            },
+            "explain": [
+                {
+                    "fixture": 1,
+                    "stats": [
+                        {"identifier": "minutes", "value": 90, "points": 2},
+                        {"identifier": "assists", "value": 1, "points": 3},
+                        {"identifier": "clean_sheets", "value": 1, "points": 4},
+                        {"identifier": "bonus", "value": 2, "points": 2},
+                    ],
+                }
+            ],
+        }
+
+        self.assertEqual(
+            _format_point_details(live_element, 2),
+            {
+                "rows": [
+                    {"identifier": "assists", "value": 1, "points": 3},
+                    {
+                        "identifier": "defensive_contribution",
+                        "value": 5,
+                        "points": 0,
+                    },
+                    {"identifier": "clean_sheets", "value": 1, "points": 4},
+                    {"identifier": "minutes", "value": 90, "points": 2},
+                    {"identifier": "bonus", "value": 2, "points": 2, "bps": 37},
+                ],
+                "total": 11,
+            },
+        )
+
+    def test_hides_details_until_player_has_played(self):
+        self.assertIsNone(_format_point_details({"stats": {"played": False}}, 3))
 
 
 class SelectGameweekTests(unittest.TestCase):
@@ -351,7 +396,12 @@ class FormatTeamDetailsTests(unittest.TestCase):
         entry_event_data = {
             1: {
                 "active_chip": "wildcard",
-                "entry_history": {"event_transfers": 2, "value": 1013, "bank": 7},
+                "entry_history": {
+                    "event_transfers": 2,
+                    "event_transfers_cost": 4,
+                    "value": 1013,
+                    "bank": 7,
+                },
                 "picks": [
                     {
                         "element": 30,
@@ -455,9 +505,11 @@ class FormatTeamDetailsTests(unittest.TestCase):
 
         self.assertEqual(details[0]["team"], "Alpha")
         self.assertEqual(details[0]["transfersMade"], 2)
+        self.assertEqual(details[0]["transferCost"], 4)
         self.assertEqual(details[0]["chip"], "WC")
         self.assertEqual(details[0]["teamValue"], 101.3)
         self.assertEqual(details[0]["bank"], 0.7)
+        self.assertEqual(details[1]["transferCost"], 0)
         self.assertEqual(
             [player["name"] for player in details[0]["players"]],
             [

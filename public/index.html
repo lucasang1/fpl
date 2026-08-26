@@ -14,7 +14,7 @@
       <header class="top-bar">
         <div class="title-group">
           <p class="eyebrow">Fantasy Premier League</p>
-          <h1 id="league-name">League standings</h1>
+          <h1 id="league-name">Winner Takes All</h1>
         </div>
         <p id="status" role="status">Loading…</p>
       </header>
@@ -61,6 +61,19 @@
           </label>
         </div>
         <div id="player-ownership" class="ownership-list"></div>
+        <nav id="importance-pagination" class="importance-pagination" aria-label="Importance pages" hidden>
+          <button id="importance-previous" type="button" aria-label="Previous importance page">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m15 18-6-6 6-6"></path>
+            </svg>
+          </button>
+          <span id="importance-page-status" aria-live="polite"></span>
+          <button id="importance-next" type="button" aria-label="Next importance page">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m9 18 6-6-6-6"></path>
+            </svg>
+          </button>
+        </nav>
       </div>
 
       <dialog id="importance-dialog" class="importance-dialog" aria-labelledby="importance-dialog-title">

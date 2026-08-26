@@ -1,5 +1,6 @@
 const tbody = document.querySelector("#standings");
 const main = document.querySelector("main");
+const topBar = document.querySelector(".top-bar");
 const leagueName = document.querySelector("#league-name");
 const status = document.querySelector("#status");
 const refreshButton = document.querySelector("#refresh");
@@ -11,6 +12,10 @@ const teamDetail = document.querySelector("#team-detail");
 const ownershipPanel = document.querySelector(".ownership-panel");
 const playerOwnership = document.querySelector("#player-ownership");
 const duoImportanceSelect = document.querySelector("#duo-importance-select");
+const importancePagination = document.querySelector("#importance-pagination");
+const importancePrevious = document.querySelector("#importance-previous");
+const importanceNext = document.querySelector("#importance-next");
+const importancePageStatus = document.querySelector("#importance-page-status");
 const importanceDialog = document.querySelector("#importance-dialog");
 const importanceDialogTitle = document.querySelector("#importance-dialog-title");
 const importanceDialogBody = document.querySelector("#importance-dialog-body");
@@ -21,8 +26,147 @@ let activeTeamId;
 let activeDuoImportanceName = "";
 let updatedAt;
 let activeImportanceAnchor;
+let importancePage = 0;
+let headerBaseFontSizes = [];
+let headerScaleFrame;
 const desktopLayout = window.matchMedia("(min-width: 901px)");
+const mobileLayout = window.matchMedia("(max-width: 700px)");
 const lastViewedTeamKey = "fpl:lastViewedTeamId";
+const importancePageSize = 15;
+let teamStatsFitFrame;
+
+function measureHeaderFontSizes() {
+  if (!topBar) return;
+
+  const textElements = topBar.querySelectorAll(".eyebrow, h1, #status");
+  textElements.forEach((element) => element.style.removeProperty("font-size"));
+  headerBaseFontSizes = Array.from(textElements, (element) => ({
+    element,
+    fontSize: parseFloat(getComputedStyle(element).fontSize),
+  }));
+}
+
+function getHeaderScale(scrollPosition) {
+  const scrollRange = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  const progress = scrollRange ? Math.min(1, Math.max(0, scrollPosition / scrollRange)) : 0;
+  return 1 - Math.min(progress, 0.5);
+}
+
+function applyHeaderFontScale(scale) {
+  if (!headerBaseFontSizes.length) measureHeaderFontSizes();
+
+  headerBaseFontSizes.forEach(({ element, fontSize }) => {
+    element.style.fontSize = `${fontSize * scale}px`;
+  });
+}
+
+function updateHeaderFontSizes() {
+  headerScaleFrame = undefined;
+  applyHeaderFontScale(getHeaderScale(window.scrollY));
+}
+
+function scheduleHeaderFontScale() {
+  if (headerScaleFrame !== undefined) return;
+  headerScaleFrame = requestAnimationFrame(updateHeaderFontSizes);
+}
+
+function resetHeaderFontScale() {
+  headerBaseFontSizes = [];
+  scheduleHeaderFontScale();
+}
+
+function scrollToTeamDetail() {
+  if (!teamDetail || !topBar) {
+    teamDetail?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  const currentScrollPosition = window.scrollY;
+  const clearance = 8;
+  let destination = currentScrollPosition + teamDetail.getBoundingClientRect().top;
+
+  // The sticky header changes height while scrolling, so measure the layout at
+  // the projected destination until the required offset settles.
+  for (let iteration = 0; iteration < 4; iteration += 1) {
+    applyHeaderFontScale(getHeaderScale(destination));
+    const detailTop = window.scrollY + teamDetail.getBoundingClientRect().top;
+    const maximumScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const nextDestination = Math.min(
+      maximumScroll,
+      Math.max(0, detailTop - topBar.getBoundingClientRect().height - clearance),
+    );
+
+    if (Math.abs(nextDestination - destination) < 0.5) {
+      destination = nextDestination;
+      break;
+    }
+    destination = nextDestination;
+  }
+
+  applyHeaderFontScale(getHeaderScale(currentScrollPosition));
+  window.scrollTo({ top: destination, behavior: "smooth" });
+}
+
+const POINT_DETAIL_LABELS = {
+  minutes: ({ value }) => `Played ${value} min`,
+  goals_scored: ({ value }) => `${value} ${pluralize("goal", value)}`,
+  assists: ({ value }) => `${value} ${pluralize("assist", value)}`,
+  clean_sheets: () => "Clean sheet",
+  goals_conceded: ({ value }) => `${value} ${pluralize("goal conceded", value, "goals conceded")}`,
+  own_goals: ({ value }) => `${value} ${pluralize("own goal", value)}`,
+  penalties_saved: ({ value }) => `${value} ${pluralize("penalty save", value)}`,
+  penalties_missed: ({ value }) => `${value} ${pluralize("penalty miss", value, "penalty misses")}`,
+  yellow_cards: ({ value }) => value === 1 ? "Yellow card" : `${value} yellow cards`,
+  red_cards: ({ value }) => value === 1 ? "Red card" : `${value} red cards`,
+  saves: ({ value }) => `${value} ${pluralize("save", value)}`,
+  defensive_contribution: ({ value }) => `${value} def. ${pluralize("contribution", value)}`,
+  bonus: ({ bps = 0 }) => `Bonus (${bps} bps)`,
+};
+
+function pluralize(singular, count, plural = `${singular}s`) {
+  return count === 1 ? singular : plural;
+}
+
+function teamStatsFit(stats) {
+  const statsRect = stats.getBoundingClientRect();
+  const statRects = Array.from(stats.children, (stat) => stat.getBoundingClientRect());
+  if (!statRects.length || !statsRect.width) return true;
+
+  const left = Math.min(...statRects.map((rect) => rect.left));
+  const right = Math.max(...statRects.map((rect) => rect.right));
+  return left >= statsRect.left - 0.5 && right <= statsRect.right + 0.5;
+}
+
+function maximizeTeamStatsFont(stats) {
+  const minimumFontSize = 1;
+  const maximumFontSize = parseFloat(getComputedStyle(stats.firstElementChild).fontSize);
+  let low = minimumFontSize;
+  let high = maximumFontSize;
+
+  stats.style.setProperty("--team-detail-stats-font-size", `${minimumFontSize}px`);
+
+  for (let iteration = 0; iteration < 8; iteration += 1) {
+    const candidate = (low + high) / 2;
+    stats.style.setProperty("--team-detail-stats-font-size", `${candidate}px`);
+    if (teamStatsFit(stats)) low = candidate;
+    else high = candidate;
+  }
+
+  stats.style.setProperty("--team-detail-stats-font-size", `${low}px`);
+}
+
+function fitTeamDetailStats() {
+  const stats = teamDetail?.querySelector(".team-detail-stats");
+  if (!stats) return;
+
+  stats.style.removeProperty("--team-detail-stats-font-size");
+  maximizeTeamStatsFont(stats);
+}
+
+function scheduleTeamStatsFit() {
+  cancelAnimationFrame(teamStatsFitFrame);
+  teamStatsFitFrame = requestAnimationFrame(fitTeamDetailStats);
+}
 
 function getSavedTeamId() {
   try {
@@ -74,6 +218,15 @@ function renderLastUpdated() {
 
 function syncOwnershipHeight() {
   if (!standingsCard || !ownershipPanel || !teamDetail) return;
+
+  if (mobileLayout.matches) {
+    teamDetail.style.maxHeight = "";
+    teamDetail.style.height = "";
+    ownershipPanel.style.maxHeight = "";
+    ownershipPanel.style.height = "";
+    ownershipPanel.classList.remove("ownership-panel-scrollable");
+    return;
+  }
 
   if (!desktopLayout.matches) {
     ownershipPanel.style.maxHeight = "";
@@ -334,12 +487,50 @@ function openImportanceDialog(player, anchor) {
   importanceDialogBody.replaceChildren(
     createTeamPickSection("Started", teams.started || []),
     createTeamPickSection("Benched", teams.benched || []),
+    createPointDetails(player.pointDetails),
   );
 
   if (!importanceDialog.open) {
     importanceDialog.showModal();
   }
   positionImportanceDialog(anchor);
+}
+
+function createPointDetails(pointDetails) {
+  const section = document.createElement("section");
+  section.className = "importance-points";
+  if (!pointDetails) {
+    section.hidden = true;
+    return section;
+  }
+
+  const table = document.createElement("table");
+  const body = document.createElement("tbody");
+  for (const detail of pointDetails.rows) {
+    const labelTemplate = POINT_DETAIL_LABELS[detail.identifier];
+    if (!labelTemplate) continue;
+
+    const row = document.createElement("tr");
+    const label = document.createElement("td");
+    const points = document.createElement("td");
+    label.textContent = `${labelTemplate(detail)}:`;
+    points.textContent = detail.points;
+    row.append(label, points);
+    body.append(row);
+  }
+
+  const totalRow = document.createElement("tr");
+  const totalLabel = document.createElement("th");
+  const total = document.createElement("th");
+  totalRow.className = "importance-points-total";
+  totalLabel.scope = "row";
+  totalLabel.textContent = "Total Points:";
+  total.textContent = pointDetails.total;
+  totalRow.append(totalLabel, total);
+  body.append(totalRow);
+  table.append(body);
+  section.append(table);
+  return section;
 }
 
 function closeImportanceDialog() {
@@ -452,6 +643,11 @@ function findStandingsTeam(teamId) {
   return (standingsData?.standings || []).find((team) => team.id === teamId);
 }
 
+function formatTransfers(transfersMade, transferCost) {
+  const transfers = formatStatValue(transfersMade);
+  return transferCost > 0 ? `${transfers} (-${transferCost})` : transfers;
+}
+
 function renderTeamDetail() {
   if (!teamDetail || activeTeamId === undefined) return;
 
@@ -479,7 +675,7 @@ function renderTeamDetail() {
   stats.className = "team-detail-stats";
   stats.append(
     createTeamStat("Total Pts", detail.totalPoints),
-    createTeamStat("Transfers", detail.transfersMade),
+    createTeamStat("Transfers", formatTransfers(detail.transfersMade, detail.transferCost)),
     createTeamStat("Chip", formatChipName(detail.chip)),
     createTeamStat("Value", formatTeamValueWithBank(detail.teamValue, detail.bank)),
   );
@@ -496,6 +692,7 @@ function renderTeamDetail() {
   );
 
   teamDetail.replaceChildren(header, players);
+  scheduleTeamStatsFit();
   syncOwnershipHeight();
 }
 
@@ -505,6 +702,7 @@ function openTeamDetail(teamId) {
   closeImportanceDialog();
   renderActiveView();
   renderOwnership();
+  requestAnimationFrame(scrollToTeamDetail);
 }
 
 function renderActiveView() {
@@ -524,6 +722,7 @@ function renderActiveView() {
     ...(isPairs ? standingsData.pairs.map(createPairRow) : standingsData.standings.map(createTeamRow)),
   );
   syncOwnershipHeight();
+  scheduleHeaderFontScale();
 }
 
 function renderOwnership() {
@@ -533,6 +732,7 @@ function renderOwnership() {
   if (!duoImportance.length) {
     duoImportanceSelect.replaceChildren();
     playerOwnership.replaceChildren();
+    importancePagination.hidden = true;
     return;
   }
 
@@ -552,13 +752,27 @@ function renderOwnership() {
   const players = selectedDuo.players.slice().sort(
     (a, b) =>
       Math.abs(b.importance) - Math.abs(a.importance) ||
-      Math.sign(b.importance) - Math.sign(a.importance) ||
+      Math.sign(a.importance) - Math.sign(b.importance) ||
       a.name.localeCompare(b.name),
   );
+  const pageCount = mobileLayout.matches
+    ? Math.max(1, Math.ceil(players.length / importancePageSize))
+    : 1;
+  importancePage = Math.min(importancePage, pageCount - 1);
+  const visiblePlayers = mobileLayout.matches
+    ? players.slice(
+        importancePage * importancePageSize,
+        (importancePage + 1) * importancePageSize,
+      )
+    : players;
   playerOwnership.replaceChildren(
     createImportanceHeader(),
-    ...players.map(createImportanceRow),
+    ...visiblePlayers.map(createImportanceRow),
   );
+  importancePagination.hidden = pageCount === 1;
+  importancePrevious.disabled = importancePage === 0;
+  importanceNext.disabled = importancePage === pageCount - 1;
+  importancePageStatus.textContent = `${importancePage + 1} / ${pageCount}`;
   syncOwnershipHeight();
 }
 
@@ -627,6 +841,16 @@ teamsViewButton.addEventListener("click", () => {
 });
 duoImportanceSelect.addEventListener("change", () => {
   activeDuoImportanceName = duoImportanceSelect.value;
+  importancePage = 0;
+  renderOwnership();
+});
+importancePrevious.addEventListener("click", () => {
+  if (importancePage === 0) return;
+  importancePage -= 1;
+  renderOwnership();
+});
+importanceNext.addEventListener("click", () => {
+  importancePage += 1;
   renderOwnership();
 });
 importanceDialogClose.addEventListener("click", closeImportanceDialog);
@@ -636,10 +860,29 @@ importanceDialog.addEventListener("click", (event) => {
 importanceDialog.addEventListener("close", () => {
   activeImportanceAnchor = undefined;
 });
-window.addEventListener("resize", () => positionImportanceDialog(activeImportanceAnchor));
+window.addEventListener("scroll", scheduleHeaderFontScale, { passive: true });
+window.addEventListener("resize", () => {
+  positionImportanceDialog(activeImportanceAnchor);
+  resetHeaderFontScale();
+});
 desktopLayout.addEventListener("change", syncOwnershipHeight);
+mobileLayout.addEventListener("change", () => {
+  importancePage = 0;
+  renderOwnership();
+});
 if (standingsCard) {
   new ResizeObserver(syncOwnershipHeight).observe(standingsCard);
 }
+if (teamDetail) {
+  new ResizeObserver(() => {
+    scheduleTeamStatsFit();
+    syncOwnershipHeight();
+  }).observe(teamDetail);
+}
+document.fonts?.ready.then(() => {
+  scheduleTeamStatsFit();
+  resetHeaderFontScale();
+});
 setInterval(renderLastUpdated, 30_000);
+scheduleHeaderFontScale();
 loadStandings();

@@ -494,9 +494,34 @@ a:hover { color: #5f5f5f; }
   text-align: right;
 }
 
+.importance-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.importance-pagination[hidden] { display: none; }
+
+.importance-pagination button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.importance-pagination svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .team-detail {
   position: relative;
-  overflow-x: auto;
+  overflow-x: hidden;
   padding: 12px 8px 8px;
   border-radius: 12px;
   background: white;
@@ -573,6 +598,8 @@ a:hover { color: #5f5f5f; }
 }
 
 .team-detail-stats {
+  --team-detail-stats-font-size: .75rem;
+
   display: flex;
   flex-wrap: nowrap;
   justify-content: center;
@@ -582,16 +609,16 @@ a:hover { color: #5f5f5f; }
   max-width: 100%;
   margin-top: 5px;
   min-width: 0;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .team-detail-stat {
   display: flex;
   flex: 0 0 auto;
-  gap: 6px;
+  gap: 4px;
   align-items: baseline;
   min-width: 0;
-  font-size: .75rem;
+  font-size: var(--team-detail-stats-font-size);
   line-height: 1.25;
 }
 
@@ -641,7 +668,7 @@ a:hover { color: #5f5f5f; }
   position: fixed;
   right: auto;
   bottom: auto;
-  width: min(280px, calc(100vw - 24px));
+  width: min(240px, calc(100vw - 24px));
   margin: 0;
   padding: 0;
   border: 1px solid #e3e3e3;
@@ -738,6 +765,42 @@ a:hover { color: #5f5f5f; }
 
 .importance-dialog-body p {
   color: #777;
+}
+
+.importance-points {
+  grid-column: 1 / -1;
+  padding-top: 8px;
+  border-top: 1px solid #ededed;
+}
+
+.importance-points table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #242424;
+  font-family: inherit;
+  font-size: .82rem;
+  line-height: 1.25;
+}
+
+.importance-points td,
+.importance-points th {
+  padding: 2px 0;
+  font-weight: 400;
+  text-align: left;
+}
+
+.importance-points td:last-child,
+.importance-points th:last-child {
+  padding-left: 12px;
+  text-align: right;
+}
+
+.importance-points .importance-points-total th {
+  padding-top: 6px;
+  border-top: 2px solid #d2d2d2;
+  color: #242424;
+  font-size: .62rem;
+  font-weight: 800;
 }
 
 @media (max-width: 700px) {
@@ -846,6 +909,9 @@ a:hover { color: #5f5f5f; }
   }
 
   .ownership-panel { 
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     margin-top: 12px;
     padding: 10px 8px 12px;
   }
@@ -895,6 +961,43 @@ a:hover { color: #5f5f5f; }
   .ownership-row strong { font-size: .6rem; }
   .ownership-header { font-size: .5rem; letter-spacing: .02em; }
 
+  .importance-pagination {
+    margin-top: auto;
+    padding-top: 8px;
+    font-size: .58rem;
+  }
+
+  .importance-pagination button {
+    width: 28px;
+    height: 24px;
+    border: 1px solid #242424;
+    border-radius: 6px;
+    padding: 0;
+    color: #242424;
+    background: transparent;
+    font-size: inherit;
+  }
+
+  .importance-pagination button:hover {
+    color: #242424;
+    background: transparent;
+  }
+
+  .importance-pagination button:disabled {
+    border-color: #aaa;
+    color: #aaa;
+    background: transparent;
+    cursor: default;
+    opacity: 1;
+  }
+
+  .importance-pagination span {
+    min-width: 34px;
+    color: #666;
+    font-weight: 750;
+    text-align: center;
+  }
+
   .team-detail {
     margin-top: 12px;
   }
@@ -939,8 +1042,7 @@ a:hover { color: #5f5f5f; }
   }
 
   .team-detail-stat {
-    gap: 5px;
-    font-size: .6rem;
+    gap: 3px;
   }
 
   .team-player-list {

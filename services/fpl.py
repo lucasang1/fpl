@@ -31,6 +31,26 @@ POSITION_SORT_ORDER = {
     3: 2,  # Midfielders
     4: 3,  # Forwards
 }
+POINT_DETAIL_ORDER = {
+    identifier: order
+    for order, identifier in enumerate(
+        (
+            "goals_scored",
+            "assists",
+            "defensive_contribution",
+            "clean_sheets",
+            "saves",
+            "penalties_saved",
+            "minutes",
+            "goals_conceded",
+            "own_goals",
+            "penalties_missed",
+            "yellow_cards",
+            "red_cards",
+            "bonus",
+        )
+    )
+}
 
 
 def _get_json(url: str) -> JsonObject:
@@ -168,6 +188,45 @@ def _player_name(element: JsonObject) -> str:
     )
 
 
+def _format_point_details(
+    live_element: JsonObject, position: int | None
+) -> JsonObject | None:
+    stats = live_element.get("stats", {})
+    if not stats.get("played"):
+        return None
+
+    details: dict[str, JsonObject] = {}
+    for fixture in live_element.get("explain", []):
+        for item in fixture.get("stats", []):
+            identifier = item.get("identifier")
+            if identifier not in POINT_DETAIL_ORDER:
+                continue
+            detail = details.setdefault(
+                identifier,
+                {"identifier": identifier, "value": 0, "points": 0},
+            )
+            detail["value"] += item.get("value", 0)
+            detail["points"] += item.get("points", 0)
+
+    if position in (2, 3, 4) and "defensive_contribution" not in details:
+        details["defensive_contribution"] = {
+            "identifier": "defensive_contribution",
+            "value": stats.get("defensive_contribution", 0),
+            "points": 0,
+        }
+
+    if "bonus" in details:
+        details["bonus"]["bps"] = stats.get("bps", 0)
+
+    return {
+        "rows": sorted(
+            details.values(),
+            key=lambda detail: POINT_DETAIL_ORDER[detail["identifier"]],
+        ),
+        "total": stats.get("total_points", 0),
+    }
+
+
 def _build_player_context(
     elements: Iterable[JsonObject],
     teams: Iterable[JsonObject],
@@ -187,6 +246,11 @@ def _build_player_context(
         element["id"]: element.get("stats", {}).get("total_points", 0)
         for element in live_elements
     }
+    live_by_player = {element["id"]: element for element in live_elements}
+    for player_id, player in players.items():
+        player["pointDetails"] = _format_point_details(
+            live_by_player.get(player_id, {}), player.get("position")
+        )
 
     fixtures_by_team: dict[int, list[JsonObject]] = defaultdict(list)
     for fixture in fixtures:
@@ -385,6 +449,7 @@ def _format_duo_importance(
                     "opponent": opponent,
                     "fixtureTime": fixture_time,
                     "points": points,
+                    "pointDetails": players.get(player_id, {}).get("pointDetails"),
                     "importance": round(selected_exposure - average_exposure, 1),
                     "teams": player_team_breakdown.get(
                         player_id, {"started": [], "benched": []}
@@ -493,6 +558,7 @@ def _format_team_details(
                     "opponent": opponent,
                     "fixtureTime": fixture_time,
                     "points": points,
+                    "pointDetails": player.get("pointDetails"),
                     "importance": round(selected_exposure - average_exposure, 1),
                     "position": player.get("position"),
                     "pickPosition": pick.get("position"),
@@ -522,6 +588,7 @@ def _format_team_details(
                 "gameweekPoints": team["gameweekPoints"],
                 "totalPoints": team["totalPoints"],
                 "transfersMade": entry_history.get("event_transfers", 0),
+                "transferCost": entry_history.get("event_transfers_cost", 0),
                 "chip": CHIP_LABELS.get(event_data.get("active_chip")),
                 "teamValue": _format_team_value(entry_history.get("value")),
                 "bank": _format_bank(entry_history, event_picks),

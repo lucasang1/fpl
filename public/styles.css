@@ -936,12 +936,11 @@ a:hover { color: #5f5f5f; }
   .team-detail-stats {
     gap: 3px 8px;
     margin-top: 3px;
-    overflow-x: hidden;
   }
 
   .team-detail-stat {
     gap: 5px;
-    font-size: clamp(0.45rem, 2.5vw, 0.75rem);
+    font-size: .6rem;
   }
 
   .team-player-list {

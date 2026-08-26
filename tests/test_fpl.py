@@ -8,6 +8,7 @@ from services.fpl import (
     _format_pairs,
     _format_player_ownership,
     _format_standings,
+    _format_team_details,
     _fetch_chips,
     _select_gameweek,
     update_standings,
@@ -329,6 +330,165 @@ class FormatDuoImportanceTests(unittest.TestCase):
         )
 
 
+class FormatTeamDetailsTests(unittest.TestCase):
+    def test_formats_team_metadata_and_players_by_position(self):
+        standings = [
+            {
+                "id": 1,
+                "team": "Alpha",
+                "manager": "One",
+                "gameweekPoints": 45,
+                "totalPoints": 420,
+            },
+            {
+                "id": 2,
+                "team": "Beta",
+                "manager": "Two",
+                "gameweekPoints": 40,
+                "totalPoints": 400,
+            },
+        ]
+        entry_event_data = {
+            1: {
+                "active_chip": "wildcard",
+                "entry_history": {"event_transfers": 2, "value": 1013, "bank": 7},
+                "picks": [
+                    {
+                        "element": 30,
+                        "position": 8,
+                        "multiplier": 1,
+                        "is_captain": False,
+                        "is_vice_captain": False,
+                    },
+                    {
+                        "element": 40,
+                        "position": 11,
+                        "multiplier": 1,
+                        "is_captain": False,
+                        "is_vice_captain": False,
+                    },
+                    {
+                        "element": 10,
+                        "position": 1,
+                        "multiplier": 1,
+                        "is_captain": False,
+                        "is_vice_captain": False,
+                    },
+                    {
+                        "element": 20,
+                        "position": 4,
+                        "multiplier": 2,
+                        "is_captain": True,
+                        "is_vice_captain": False,
+                    },
+                    {
+                        "element": 11,
+                        "position": 12,
+                        "multiplier": 0,
+                        "is_captain": False,
+                        "is_vice_captain": True,
+                    },
+                    {
+                        "element": 31,
+                        "position": 13,
+                        "multiplier": 0,
+                        "is_captain": False,
+                        "is_vice_captain": False,
+                    },
+                    {
+                        "element": 41,
+                        "position": 14,
+                        "multiplier": 0,
+                        "is_captain": False,
+                        "is_vice_captain": False,
+                    },
+                    {
+                        "element": 21,
+                        "position": 15,
+                        "multiplier": 0,
+                        "is_captain": False,
+                        "is_vice_captain": False,
+                    },
+                ],
+            },
+            2: {
+                "active_chip": None,
+                "entry_history": {"event_transfers": 0, "value": 1000, "bank": 0},
+                "picks": [
+                    {"element": 10, "position": 1, "multiplier": 1},
+                    {"element": 20, "position": 4, "multiplier": 1},
+                    {"element": 30, "position": 8, "multiplier": 1},
+                ],
+            },
+        }
+        elements = [
+            {"id": 10, "web_name": "Raya", "team": 1, "element_type": 1},
+            {"id": 11, "web_name": "Flekken", "team": 2, "element_type": 1},
+            {"id": 20, "web_name": "Gabriel", "team": 1, "element_type": 2},
+            {"id": 21, "web_name": "White", "team": 1, "element_type": 2},
+            {"id": 30, "web_name": "Saka", "team": 1, "element_type": 3},
+            {"id": 31, "web_name": "Palmer", "team": 1, "element_type": 3},
+            {"id": 40, "web_name": "Watkins", "team": 2, "element_type": 4},
+            {"id": 41, "web_name": "Haaland", "team": 2, "element_type": 4},
+        ]
+        teams = [{"id": 1, "short_name": "ARS"}, {"id": 2, "short_name": "BRE"}]
+        fixtures = [
+            {
+                "team_h": 1,
+                "team_a": 2,
+                "started": True,
+                "finished": False,
+                "kickoff_time": "2024-08-18T07:00:00Z",
+            }
+        ]
+        live_elements = [
+            {"id": 10, "stats": {"total_points": 2}},
+            {"id": 11, "stats": {"total_points": 3}},
+            {"id": 20, "stats": {"total_points": 6}},
+            {"id": 30, "stats": {"total_points": 5}},
+            {"id": 40, "stats": {"total_points": 4}},
+        ]
+
+        details = _format_team_details(
+            standings, entry_event_data, elements, teams, fixtures, live_elements
+        )
+
+        self.assertEqual(details[0]["team"], "Alpha")
+        self.assertEqual(details[0]["transfersMade"], 2)
+        self.assertEqual(details[0]["chip"], "WC")
+        self.assertEqual(details[0]["teamValue"], 101.3)
+        self.assertEqual(details[0]["bank"], 0.7)
+        self.assertEqual(
+            [player["name"] for player in details[0]["players"]],
+            [
+                "Raya",
+                "Gabriel",
+                "Saka",
+                "Watkins",
+                "Flekken",
+                "White",
+                "Palmer",
+                "Haaland",
+            ],
+        )
+        self.assertTrue(details[0]["players"][4]["isBenched"])
+        self.assertTrue(details[0]["players"][1]["isCaptain"])
+        self.assertEqual(details[0]["players"][1]["importance"], 100.0)
+        self.assertEqual(
+            details[0]["players"][1]["teams"],
+            {
+                "started": [
+                    {"name": "Alpha", "captain": True},
+                    {"name": "Beta", "captain": False},
+                ],
+                "benched": [],
+            },
+        )
+        self.assertEqual(details[0]["players"][2]["opponent"], "BRE (H)")
+        self.assertEqual(details[0]["players"][2]["fixtureTime"], "Sun 15:00")
+        self.assertEqual(details[0]["players"][2]["points"], 5)
+
+
 class UpdateStandingsTests(unittest.TestCase):
     def test_fetches_every_page_and_writes_the_result(self):
         requested_urls = []
@@ -354,11 +514,19 @@ class UpdateStandingsTests(unittest.TestCase):
 
             if url.endswith("/picks/"):
                 return {
+                    "active_chip": None,
+                    "entry_history": {"event_transfers": 0, "value": 1000},
                     "picks": [
                         {"element": 1, "multiplier": 1},
                         {"element": 2, "multiplier": 2},
                     ]
                 }
+
+            if "/fixtures/" in url:
+                return []
+
+            if "/live/" in url:
+                return {"elements": []}
 
             if "/entry/" in url:
                 entry_id = int(url.rstrip("/").rsplit("/", 1)[1])
@@ -386,13 +554,14 @@ class UpdateStandingsTests(unittest.TestCase):
             )
             saved_output = json.loads(destination.read_text(encoding="utf-8"))
 
-        self.assertEqual(len(requested_urls), 7)
+        self.assertEqual(len(requested_urls), 9)
         self.assertEqual([team["rank"] for team in output["standings"]], [1, 2])
         self.assertEqual(
             [team["badgeUrl"] for team in output["standings"]],
             ["https://example.com/10.png", "https://example.com/20.png"],
         )
         self.assertEqual(output["duoImportance"], [])
+        self.assertEqual([team["team"] for team in output["teamDetails"]], ["Team 1", "Team 2"])
         self.assertEqual(saved_output, output)
 
     def test_includes_ranked_and_new_entries(self):
@@ -412,7 +581,17 @@ class UpdateStandingsTests(unittest.TestCase):
                 }
 
             if url.endswith("/picks/"):
-                return {"picks": [{"element": 1, "multiplier": 1}]}
+                return {
+                    "active_chip": None,
+                    "entry_history": {"event_transfers": 0, "value": 1000},
+                    "picks": [{"element": 1, "multiplier": 1}],
+                }
+
+            if "/fixtures/" in url:
+                return []
+
+            if "/live/" in url:
+                return {"elements": []}
 
             if "/entry/" in url:
                 return {"club_badge_src": None}

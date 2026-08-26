@@ -39,6 +39,25 @@ main {
     padding: 0;
   }
 
+  main > .team-detail {
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .team-detail > .team-detail-header {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    min-height: var(--control-row-height);
+    margin-bottom: 0;
+    padding: 12px 16px;
+    background: white;
+  }
+
+  .team-detail-stats {
+    margin-top: 3px;
+  }
+
   .table-toolbar {
     min-height: var(--control-row-height);
   }
@@ -56,6 +75,11 @@ main {
 
   .ownership-list {
     padding: 0 8px 8px;
+  }
+
+  .team-player-name {
+    justify-self: start;
+    max-width: 100%;
   }
 }
 
@@ -183,6 +207,22 @@ button:disabled { cursor: wait; opacity: .65; }
   box-shadow: 0 8px 28px rgb(0 0 0 / 8%);
 }
 
+.team-detail-active {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.team-detail-active .table-wrap {
+  grid-column: 1 / -1;
+}
+
+.team-detail-active .team-detail {
+  grid-column: 1;
+}
+
+.team-detail-active .ownership-panel {
+  grid-column: 2;
+}
+
 table {
   width: 100%;
   table-layout: fixed;
@@ -226,7 +266,20 @@ a:hover { color: #5f5f5f; }
   align-items: center;
   gap: 10px;
   max-width: 100%;
+  min-width: 0;
+  padding: 0;
+  border-radius: 0;
+  color: #242424;
+  background: transparent;
+  font-weight: 700;
+  text-align: left;
   text-decoration: none;
+}
+
+.team-link:hover,
+.team-link:focus-visible {
+  color: #5f5f5f;
+  background: transparent;
 }
 
 .team-name {
@@ -255,7 +308,7 @@ a:hover { color: #5f5f5f; }
 .team-badge {
   width: 32px;
   height: 32px;
-  border-radius: 6px;
+  border-radius: 0;
   object-fit: cover;
   flex: 0 0 auto;
 }
@@ -439,6 +492,149 @@ a:hover { color: #5f5f5f; }
 
 .ownership-header span:nth-child(5) {
   text-align: right;
+}
+
+.team-detail {
+  position: relative;
+  overflow-x: auto;
+  padding: 12px 8px 8px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 8%);
+}
+
+.team-detail-header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e7e7e7;
+}
+
+.team-detail-title {
+  display: grid;
+  grid-column: 1 / 3;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.team-detail-title-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.team-detail-title .team-badge {
+  width: 42px;
+  height: 42px;
+}
+
+.team-detail-title h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 1.3rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-detail-gw-score {
+  display: grid;
+  grid-column: 3;
+  place-items: center;
+  justify-self: end;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #d7d7d7;
+  border-radius: 0;
+  color: #242424;
+  background: white;
+  text-align: center;
+}
+
+.team-detail-gw-score span {
+  color: #666;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.team-detail-gw-score strong {
+  font-size: 1.12rem;
+  line-height: 1;
+}
+
+.team-detail-stats {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 6px 14px;
+  align-items: baseline;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 5px;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.team-detail-stat {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+  align-items: baseline;
+  min-width: 0;
+  font-size: .75rem;
+  line-height: 1.25;
+}
+
+.team-detail-stat span {
+  color: #666;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.team-detail-stat strong {
+  overflow: hidden;
+  color: #242424;
+  font-size: inherit;
+  line-height: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-player-list {
+  --ownership-columns: minmax(90px, 1fr) minmax(5ch, max-content) minmax(6ch, max-content) minmax(5ch, max-content);
+}
+
+.team-player-row {
+  cursor: pointer;
+}
+
+.team-player-name {
+  color: #242424;
+  font-weight: 750;
+}
+
+.team-player-row-benched {
+  background: transparent;
+}
+
+.team-player-row:not(.team-player-row-benched) + .team-player-row-benched {
+  border-top: 1px solid #d2d2d2;
+}
+
+.team-player-row-benched .team-player-name,
+.team-player-row-benched span,
+.team-player-row-benched strong {
+  color: #767676;
 }
 
 .importance-dialog {
@@ -636,7 +832,6 @@ a:hover { color: #5f5f5f; }
   .team-badge {
     width: 20px;
     height: 20px;
-    border-radius: 4px;
   }
 
   .manager-headshot {
@@ -699,4 +894,57 @@ a:hover { color: #5f5f5f; }
 
   .ownership-row strong { font-size: .6rem; }
   .ownership-header { font-size: .5rem; letter-spacing: .02em; }
+
+  .team-detail {
+    margin-top: 12px;
+  }
+
+  .team-detail-header {
+    grid-template-columns: 28px minmax(0, 1fr) 28px;
+    gap: 8px;
+    padding: 0 2px 5px;
+  }
+
+  .team-detail-title {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .team-detail-title .team-badge {
+    width: 28px;
+    height: 28px;
+  }
+
+  .team-detail-title h2 {
+    font-size: .95rem;
+  }
+
+  .team-detail-gw-score {
+    width: 28px;
+    height: 28px;
+  }
+
+  .team-detail-gw-score span {
+    font-size: .42rem;
+    letter-spacing: .02em;
+  }
+
+  .team-detail-gw-score strong {
+    font-size: .82rem;
+  }
+
+  .team-detail-stats {
+    gap: 3px 8px;
+    margin-top: 3px;
+  }
+
+  .team-detail-stat {
+    gap: 5px;
+    font-size: .6rem;
+  }
+
+  .team-player-list {
+    --ownership-columns: minmax(62px, 1fr) minmax(3ch, max-content) minmax(6ch, max-content) minmax(5ch, max-content);
+  }
+
 }

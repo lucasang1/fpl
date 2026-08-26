@@ -1,4 +1,5 @@
 const tbody = document.querySelector("#standings");
+const main = document.querySelector("main");
 const leagueName = document.querySelector("#league-name");
 const status = document.querySelector("#status");
 const refreshButton = document.querySelector("#refresh");
@@ -6,6 +7,7 @@ const lastUpdated = document.querySelector("#last-updated");
 const pairsViewButton = document.querySelector("#pairs-view");
 const teamsViewButton = document.querySelector("#teams-view");
 const standingsCard = document.querySelector(".table-wrap");
+const teamDetail = document.querySelector("#team-detail");
 const ownershipPanel = document.querySelector(".ownership-panel");
 const playerOwnership = document.querySelector("#player-ownership");
 const duoImportanceSelect = document.querySelector("#duo-importance-select");
@@ -15,10 +17,43 @@ const importanceDialogBody = document.querySelector("#importance-dialog-body");
 const importanceDialogClose = document.querySelector("#importance-dialog-close");
 let standingsData;
 let activeView = "pairs";
+let activeTeamId;
 let activeDuoImportanceName = "";
 let updatedAt;
 let activeImportanceAnchor;
 const desktopLayout = window.matchMedia("(min-width: 901px)");
+const lastViewedTeamKey = "fpl:lastViewedTeamId";
+
+function getSavedTeamId() {
+  try {
+    const value = localStorage.getItem(lastViewedTeamKey);
+    return value ? Number(value) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function saveTeamId(teamId) {
+  try {
+    localStorage.setItem(lastViewedTeamKey, String(teamId));
+  } catch {
+    // Ignore storage failures so private browsing/settings do not break the page.
+  }
+}
+
+function setDefaultActiveTeam() {
+  const standings = standingsData?.standings || [];
+  if (!standings.length) return;
+
+  const savedTeamId = getSavedTeamId();
+  const activeStillExists = standings.some((team) => team.id === activeTeamId);
+  const savedTeamExists = standings.some((team) => team.id === savedTeamId);
+
+  if (activeStillExists) return;
+
+  activeTeamId = savedTeamExists ? savedTeamId : standings[0].id;
+  saveTeamId(activeTeamId);
+}
 
 function formatTimeAgo(date) {
   const elapsedSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
@@ -38,15 +73,22 @@ function renderLastUpdated() {
 }
 
 function syncOwnershipHeight() {
-  if (!standingsCard || !ownershipPanel) return;
+  if (!standingsCard || !ownershipPanel || !teamDetail) return;
 
   if (!desktopLayout.matches) {
     ownershipPanel.style.maxHeight = "";
+    ownershipPanel.style.height = "";
+    teamDetail.style.maxHeight = "";
+    teamDetail.style.height = "";
     ownershipPanel.classList.remove("ownership-panel-scrollable");
     return;
   }
 
-  ownershipPanel.style.maxHeight = `${standingsCard.getBoundingClientRect().height}px`;
+  const standingsHeight = `${standingsCard.getBoundingClientRect().height}px`;
+  ownershipPanel.style.maxHeight = standingsHeight;
+  ownershipPanel.style.height = activeTeamId === undefined ? "" : standingsHeight;
+  teamDetail.style.maxHeight = activeTeamId === undefined ? "" : standingsHeight;
+  teamDetail.style.height = activeTeamId === undefined ? "" : standingsHeight;
   ownershipPanel.classList.toggle(
     "ownership-panel-scrollable",
     ownershipPanel.scrollHeight > ownershipPanel.clientHeight + 1,
@@ -74,24 +116,26 @@ function createFallbackBadge(teamName) {
   return svg;
 }
 
-function createTeamLink(team) {
-  const link = document.createElement("a");
-
-  link.href = team.url;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.className = "team-link";
-
+function createTeamBadge(team) {
   if (team.badgeUrl) {
     const badge = document.createElement("img");
     badge.src = team.badgeUrl;
     badge.alt = `${team.team} badge`;
     badge.className = "team-badge";
     badge.loading = "lazy";
-    link.append(badge);
-  } else {
-    link.append(createFallbackBadge(team.team));
+    return badge;
   }
+
+  return createFallbackBadge(team.team);
+}
+
+function createTeamLink(team) {
+  const link = document.createElement("button");
+
+  link.type = "button";
+  link.className = "team-link";
+  link.addEventListener("click", () => openTeamDetail(team.id));
+  link.append(createTeamBadge(team));
 
   const teamNameGroup = document.createElement("span");
   const teamName = document.createElement("span");
@@ -209,6 +253,30 @@ function formatPercent(value) {
   return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
 }
 
+function formatTeamValue(value) {
+  return Number.isFinite(value) ? `${value.toFixed(1)}m` : "—";
+}
+
+function formatTeamValueWithBank(value, bank) {
+  const teamValue = formatTeamValue(value);
+  if (!Number.isFinite(bank)) return teamValue;
+  return `${teamValue} (${formatTeamValue(bank)} bank)`;
+}
+
+function formatStatValue(value) {
+  return Number.isFinite(value) ? value.toLocaleString() : value;
+}
+
+function formatChipName(chip) {
+  const chipNames = {
+    BB: "Bench Boost",
+    WC: "Wildcard",
+    FH: "Free Hit",
+    TC: "Triple Captain",
+  };
+  return chipNames[chip] || chip || "-";
+}
+
 function formatTeamPick(team) {
   return `${team.name}${team.captain ? " (C)" : ""}`;
 }
@@ -304,8 +372,151 @@ function createImportanceRow(player) {
   return row;
 }
 
+function findImportancePlayer(playerId) {
+  return (standingsData?.duoImportance || [])
+    .flatMap((duo) => duo.players || [])
+    .find((player) => player.id === playerId);
+}
+
+function playerWithImportanceTeams(player) {
+  const importancePlayer = findImportancePlayer(player.id);
+  return {
+    ...importancePlayer,
+    ...player,
+    teams: player.teams || importancePlayer?.teams || { started: [], benched: [] },
+  };
+}
+
+function playerDisplayName(player) {
+  if (player.isCaptain) return `${player.name} (C)`;
+  if (player.isViceCaptain) return `${player.name} (VC)`;
+  return player.name;
+}
+
+function createTeamPlayerRow(player) {
+  const row = document.createElement("div");
+  const name = document.createElement("button");
+  const opponent = document.createElement("span");
+  const fixtureTime = document.createElement("span");
+  const points = document.createElement("span");
+
+  row.className = "ownership-row team-player-row";
+  if (player.isBenched) row.classList.add("team-player-row-benched");
+  name.className = "importance-player-button team-player-name";
+  name.type = "button";
+  name.textContent = playerDisplayName(player);
+  opponent.textContent = player.opponent;
+  fixtureTime.textContent = player.fixtureTime || "-";
+  points.textContent = player.points;
+  const openPlayerTeams = () => {
+    openImportanceDialog(playerWithImportanceTeams(player), name);
+  };
+  row.addEventListener("click", openPlayerTeams);
+  name.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openPlayerTeams();
+  });
+  row.append(name, opponent, fixtureTime, points);
+  return row;
+}
+
+function createTeamStat(label, value) {
+  const stat = document.createElement("div");
+  const statLabel = document.createElement("span");
+  const statValue = document.createElement("strong");
+
+  stat.className = "team-detail-stat";
+  statLabel.textContent = label;
+  statValue.textContent = formatStatValue(value);
+  stat.append(statLabel, statValue);
+  return stat;
+}
+
+function createGameweekScore(points) {
+  const score = document.createElement("div");
+  const label = document.createElement("span");
+  const value = document.createElement("strong");
+
+  score.className = "team-detail-gw-score";
+  label.textContent = "GW";
+  value.textContent = formatStatValue(points);
+  score.append(label, value);
+  return score;
+}
+
+function findTeamDetail(teamId) {
+  return (standingsData?.teamDetails || []).find((team) => team.id === teamId);
+}
+
+function findStandingsTeam(teamId) {
+  return (standingsData?.standings || []).find((team) => team.id === teamId);
+}
+
+function renderTeamDetail() {
+  if (!teamDetail || activeTeamId === undefined) return;
+
+  const detail = findTeamDetail(activeTeamId);
+  const standingsTeam = findStandingsTeam(activeTeamId);
+  if (!detail || !standingsTeam) {
+    teamDetail.replaceChildren();
+    return;
+  }
+
+  const header = document.createElement("div");
+  const titleGroup = document.createElement("div");
+  const titleText = document.createElement("div");
+  const teamName = document.createElement("h2");
+  const gameweekScore = createGameweekScore(detail.gameweekPoints);
+  const stats = document.createElement("div");
+  const players = document.createElement("div");
+
+  header.className = "team-detail-header";
+
+  titleGroup.className = "team-detail-title";
+  titleText.className = "team-detail-title-text";
+  teamName.textContent = detail.team;
+
+  stats.className = "team-detail-stats";
+  stats.append(
+    createTeamStat("Total Pts", detail.totalPoints),
+    createTeamStat("Transfers", detail.transfersMade),
+    createTeamStat("Chip", formatChipName(detail.chip)),
+    createTeamStat("Value", formatTeamValueWithBank(detail.teamValue, detail.bank)),
+  );
+
+  titleText.append(teamName, stats);
+  titleGroup.append(createTeamBadge(standingsTeam), titleText);
+
+  header.append(titleGroup, gameweekScore);
+
+  players.className = "ownership-list team-player-list";
+  players.replaceChildren(
+    createTeamPlayerHeader(),
+    ...detail.players.map(createTeamPlayerRow),
+  );
+
+  teamDetail.replaceChildren(header, players);
+  syncOwnershipHeight();
+}
+
+function openTeamDetail(teamId) {
+  activeTeamId = teamId;
+  saveTeamId(teamId);
+  closeImportanceDialog();
+  renderActiveView();
+  renderOwnership();
+}
+
 function renderActiveView() {
   if (!standingsData) return;
+  setDefaultActiveTeam();
+  const hasActiveTeam = activeTeamId !== undefined;
+  main?.classList.toggle("team-detail-active", hasActiveTeam);
+  if (teamDetail) teamDetail.hidden = !hasActiveTeam;
+  if (hasActiveTeam) {
+    renderTeamDetail();
+  }
+
   const isPairs = activeView === "pairs";
   pairsViewButton.setAttribute("aria-pressed", String(isPairs));
   teamsViewButton.setAttribute("aria-pressed", String(!isPairs));
@@ -362,11 +573,23 @@ function createImportanceHeader() {
   return row;
 }
 
+function createTeamPlayerHeader() {
+  const row = document.createElement("div");
+  row.className = "ownership-row ownership-header";
+  for (const label of ["Player", "Opp", "Status", "Pts"]) {
+    const cell = document.createElement("span");
+    cell.textContent = label;
+    row.append(cell);
+  }
+  return row;
+}
+
 function renderStandings(data) {
   standingsData = data;
   leagueName.textContent = data.league.name;
   status.textContent = data.gameweek.name;
   updatedAt = new Date(data.updatedAt);
+  setDefaultActiveTeam();
   renderLastUpdated();
   renderActiveView();
   renderOwnership();
@@ -395,10 +618,12 @@ refreshButton.addEventListener("click", () => loadStandings(true));
 pairsViewButton.addEventListener("click", () => {
   activeView = "pairs";
   renderActiveView();
+  renderOwnership();
 });
 teamsViewButton.addEventListener("click", () => {
   activeView = "teams";
   renderActiveView();
+  renderOwnership();
 });
 duoImportanceSelect.addEventListener("change", () => {
   activeDuoImportanceName = duoImportanceSelect.value;

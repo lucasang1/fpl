@@ -1,4 +1,5 @@
 import json
+import ssl
 from collections import defaultdict
 from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
@@ -12,17 +13,29 @@ from config import FPL_API_URL, HEADSHOTS, LEAGUE_ID, PAIRINGS, PUBLIC_DIR
 JsonObject = dict[str, Any]
 JsonFetcher = Callable[[str], JsonObject]
 FIXTURE_TIMEZONE = timezone(timedelta(hours=8))
+try:
+    import certifi
+except ImportError:  # pragma: no cover - depends on deployment environment
+    SSL_CONTEXT = None
+else:
+    SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 CHIP_LABELS = {
     "bboost": "BB",
     "3xc": "TC",
     "freehit": "FH",
     "wildcard": "WC",
 }
+POSITION_SORT_ORDER = {
+    1: 0,  # Goalkeepers
+    2: 1,  # Defenders
+    3: 2,  # Midfielders
+    4: 3,  # Forwards
+}
 
 
 def _get_json(url: str) -> JsonObject:
     request = Request(url, headers={"User-Agent": "fpl-league-site"})
-    with urlopen(request, timeout=20) as response:
+    with urlopen(request, timeout=20, context=SSL_CONTEXT) as response:
         return json.load(response)
 
 
@@ -109,25 +122,118 @@ def _fetch_badges(
 def _fetch_chips(
     entries: Iterable[JsonObject], gameweek_id: int, fetch_json: JsonFetcher
 ) -> dict[int, str]:
-    def fetch_chip(entry: JsonObject) -> tuple[int, str | None]:
+    return {
+        entry_id: chip
+        for entry_id, chip in _format_chips(
+            _fetch_entry_event_data(entries, gameweek_id, fetch_json)
+        ).items()
+        if chip is not None
+    }
+
+
+def _fetch_entry_event_data(
+    entries: Iterable[JsonObject], gameweek_id: int, fetch_json: JsonFetcher
+) -> dict[int, JsonObject]:
+    def fetch_event_data(entry: JsonObject) -> tuple[int, JsonObject | None]:
         entry_id = entry["entry"]
         try:
             data = fetch_json(f"{FPL_API_URL}/entry/{entry_id}/event/{gameweek_id}/picks/")
         except Exception:
             return entry_id, None
-
-        chip = data.get("active_chip")
-        return entry_id, CHIP_LABELS.get(chip)
+        return entry_id, data
 
     entries = list(entries)
     if not entries:
         return {}
     with ThreadPoolExecutor(max_workers=min(8, len(entries))) as executor:
         return {
-            entry_id: chip
-            for entry_id, chip in executor.map(fetch_chip, entries)
-            if chip is not None
+            entry_id: data
+            for entry_id, data in executor.map(fetch_event_data, entries)
+            if data is not None
         }
+
+
+def _format_chips(entry_event_data: dict[int, JsonObject]) -> dict[int, str | None]:
+    return {
+        entry_id: CHIP_LABELS.get(data.get("active_chip"))
+        for entry_id, data in entry_event_data.items()
+    }
+
+
+def _player_name(element: JsonObject) -> str:
+    return (
+        element.get("web_name")
+        or f'{element.get("first_name", "")} {element.get("second_name", "")}'.strip()
+        or f'Player {element["id"]}'
+    )
+
+
+def _build_player_context(
+    elements: Iterable[JsonObject],
+    teams: Iterable[JsonObject],
+    fixtures: Iterable[JsonObject],
+    live_elements: Iterable[JsonObject],
+) -> tuple[dict[int, JsonObject], Callable[[int], tuple[str, str, int | str]]]:
+    players = {
+        element["id"]: {
+            "name": _player_name(element),
+            "team": element.get("team"),
+            "position": element.get("element_type"),
+        }
+        for element in elements
+    }
+    team_names = {team["id"]: team.get("short_name", team.get("name", "")) for team in teams}
+    live_points = {
+        element["id"]: element.get("stats", {}).get("total_points", 0)
+        for element in live_elements
+    }
+
+    fixtures_by_team: dict[int, list[JsonObject]] = defaultdict(list)
+    for fixture in fixtures:
+        home_id = fixture["team_h"]
+        away_id = fixture["team_a"]
+        finished = bool(fixture.get("finished") or fixture.get("finished_provisional"))
+        started = bool(fixture.get("started") or finished)
+        fixtures_by_team[home_id].append(
+            {
+                "opponent": team_names.get(away_id, str(away_id)),
+                "venue": "H",
+                "started": started,
+                "finished": finished,
+                "time": _format_fixture_time(fixture.get("kickoff_time")),
+            }
+        )
+        fixtures_by_team[away_id].append(
+            {
+                "opponent": team_names.get(home_id, str(home_id)),
+                "venue": "A",
+                "started": started,
+                "finished": finished,
+                "time": _format_fixture_time(fixture.get("kickoff_time")),
+            }
+        )
+
+    def player_context(player_id: int) -> tuple[str, str, int | str]:
+        player = players.get(player_id, {})
+        player_fixtures = fixtures_by_team.get(player.get("team"), [])
+        if not player_fixtures:
+            return "-", "-", "-"
+
+        opponent = ", ".join(
+            f'{fixture["opponent"]} ({fixture["venue"]})'
+            for fixture in player_fixtures
+        )
+        fixture_time = (
+            "Done"
+            if any(fixture["finished"] for fixture in player_fixtures)
+            else ", ".join(fixture["time"] for fixture in player_fixtures)
+        )
+        points = live_points.get(player_id, 0) if any(
+            fixture["started"] for fixture in player_fixtures
+        ) else "-"
+        return opponent, fixture_time, points
+
+    return players, player_context
 
 
 def _format_player_ownership(
@@ -203,45 +309,9 @@ def _format_duo_importance(
     if not pairs:
         return []
 
-    players = {
-        element["id"]: {
-            "name": element.get("web_name")
-            or f'{element.get("first_name", "")} {element.get("second_name", "")}'.strip()
-            or f'Player {element["id"]}',
-            "team": element.get("team"),
-        }
-        for element in elements
-    }
-    team_names = {team["id"]: team.get("short_name", team.get("name", "")) for team in teams}
-    live_points = {
-        element["id"]: element.get("stats", {}).get("total_points", 0)
-        for element in live_elements
-    }
-
-    fixtures_by_team: dict[int, list[JsonObject]] = defaultdict(list)
-    for fixture in fixtures:
-        home_id = fixture["team_h"]
-        away_id = fixture["team_a"]
-        finished = bool(fixture.get("finished") or fixture.get("finished_provisional"))
-        started = bool(fixture.get("started") or finished)
-        fixtures_by_team[home_id].append(
-            {
-                "opponent": team_names.get(away_id, str(away_id)),
-                "venue": "H",
-                "started": started,
-                "finished": finished,
-                "time": _format_fixture_time(fixture.get("kickoff_time")),
-            }
-        )
-        fixtures_by_team[away_id].append(
-            {
-                "opponent": team_names.get(home_id, str(home_id)),
-                "venue": "A",
-                "started": started,
-                "finished": finished,
-                "time": _format_fixture_time(fixture.get("kickoff_time")),
-            }
-        )
+    players, player_context = _build_player_context(
+        elements, teams, fixtures, live_elements
+    )
 
     pick_cache: dict[int, list[JsonObject]] = {}
 
@@ -293,26 +363,6 @@ def _format_duo_importance(
     comparison_pairs = pair_data[:50]
     all_owned = set().union(*(pair["owned"] for pair in pair_data))
 
-    def player_context(player_id: int) -> tuple[str, str, int | str]:
-        player = players.get(player_id, {})
-        player_fixtures = fixtures_by_team.get(player.get("team"), [])
-        if not player_fixtures:
-            return "-", "-", "-"
-
-        opponent = ", ".join(
-            f'{fixture["opponent"]} ({fixture["venue"]})'
-            for fixture in player_fixtures
-        )
-        fixture_time = (
-            "Done"
-            if any(fixture["finished"] for fixture in player_fixtures)
-            else ", ".join(fixture["time"] for fixture in player_fixtures)
-        )
-        points = live_points.get(player_id, 0) if any(
-            fixture["started"] for fixture in player_fixtures
-        ) else "-"
-        return opponent, fixture_time, points
-
     importance_by_duo = []
     for selected in pair_data:
         comparison = [
@@ -346,6 +396,140 @@ def _format_duo_importance(
         importance_by_duo.append({"name": selected["name"], "players": rows})
 
     return importance_by_duo
+
+
+def _format_team_value(value: int | float | None) -> float | None:
+    if not isinstance(value, int | float):
+        return None
+    return round(value / 10, 1)
+
+
+def _format_bank(entry_history: JsonObject, picks: Iterable[JsonObject]) -> float | None:
+    bank = entry_history.get("bank")
+    if isinstance(bank, int | float):
+        return _format_team_value(bank)
+
+    value = entry_history.get("value")
+    selling_prices = [pick.get("selling_price") for pick in picks]
+    if not isinstance(value, int | float) or not selling_prices:
+        return None
+    if not all(isinstance(price, int | float) for price in selling_prices):
+        return None
+
+    return _format_team_value(value - sum(selling_prices))
+
+
+def _format_team_details(
+    standings: Iterable[JsonObject],
+    entry_event_data: dict[int, JsonObject],
+    elements: Iterable[JsonObject],
+    teams: Iterable[JsonObject],
+    fixtures: Iterable[JsonObject],
+    live_elements: Iterable[JsonObject],
+) -> list[JsonObject]:
+    standings = list(standings)
+    if not standings:
+        return []
+
+    players, player_context = _build_player_context(
+        elements, teams, fixtures, live_elements
+    )
+    team_exposure: dict[int, dict[int, int]] = {}
+    player_team_breakdown: dict[int, JsonObject] = defaultdict(
+        lambda: {"started": [], "benched": []}
+    )
+    for team in standings:
+        entry_id = team["id"]
+        team_name = team.get("team") or team.get("manager") or f"Team {entry_id}"
+        exposure: dict[int, int] = defaultdict(int)
+        for pick in entry_event_data.get(entry_id, {}).get("picks", []):
+            player_id = pick["element"]
+            multiplier = pick.get("multiplier", 0)
+            exposure[player_id] += multiplier
+            if multiplier > 0:
+                player_team_breakdown[player_id]["started"].append(
+                    {"name": team_name, "captain": multiplier > 1}
+                )
+            else:
+                player_team_breakdown[player_id]["benched"].append(
+                    {"name": team_name}
+                )
+        team_exposure[entry_id] = exposure
+
+    team_details = []
+    comparison_limit = standings[:50]
+    for team in standings:
+        entry_id = team["id"]
+        event_data = entry_event_data.get(entry_id, {})
+        entry_history = event_data.get("entry_history", {})
+        event_picks = event_data.get("picks", [])
+        comparison = [
+            comparison_team
+            for comparison_team in comparison_limit
+            if comparison_team["id"] != entry_id
+        ]
+        picks = []
+
+        for pick in event_picks:
+            player_id = pick["element"]
+            player = players.get(player_id, {})
+            selected_exposure = team_exposure.get(entry_id, {}).get(player_id, 0) * 100
+            average_exposure = (
+                sum(
+                    team_exposure.get(comparison_team["id"], {}).get(player_id, 0)
+                    * 100
+                    for comparison_team in comparison
+                )
+                / len(comparison)
+                if comparison
+                else 0
+            )
+            opponent, fixture_time, points = player_context(player_id)
+            multiplier = pick.get("multiplier", 0)
+            picks.append(
+                {
+                    "id": player_id,
+                    "name": player.get("name", f"Player {player_id}"),
+                    "opponent": opponent,
+                    "fixtureTime": fixture_time,
+                    "points": points,
+                    "importance": round(selected_exposure - average_exposure, 1),
+                    "position": player.get("position"),
+                    "pickPosition": pick.get("position"),
+                    "multiplier": multiplier,
+                    "isCaptain": bool(pick.get("is_captain")),
+                    "isViceCaptain": bool(pick.get("is_vice_captain")),
+                    "isBenched": multiplier == 0,
+                    "teams": player_team_breakdown.get(
+                        player_id, {"started": [], "benched": []}
+                    ),
+                }
+            )
+
+        picks.sort(
+            key=lambda pick: (
+                1 if (pick.get("pickPosition") or 99) > 11 else 0,
+                POSITION_SORT_ORDER.get(pick.get("position"), 99),
+                pick.get("pickPosition") or 99,
+                pick["name"],
+            )
+        )
+        team_details.append(
+            {
+                "id": entry_id,
+                "team": team["team"],
+                "manager": team["manager"],
+                "gameweekPoints": team["gameweekPoints"],
+                "totalPoints": team["totalPoints"],
+                "transfersMade": entry_history.get("event_transfers", 0),
+                "chip": CHIP_LABELS.get(event_data.get("active_chip")),
+                "teamValue": _format_team_value(entry_history.get("value")),
+                "bank": _format_bank(entry_history, event_picks),
+                "players": picks,
+            }
+        )
+
+    return team_details
 
 
 def _format_standings(
@@ -450,11 +634,16 @@ def fetch_standings(
     gameweek = _select_gameweek(bootstrap["events"])
     league, entries = _fetch_league(fetch_json)
     badges = _fetch_badges(entries, fetch_json)
-    chips = _fetch_chips(entries, gameweek["id"], fetch_json)
+    entry_event_data = _fetch_entry_event_data(entries, gameweek["id"], fetch_json)
+    chips = _format_chips(entry_event_data)
     standings = _format_standings(entries, gameweek["id"], badges, chips)
     pairs = _format_pairs(standings, pairings)
-    fixtures = fetch_json(f"{FPL_API_URL}/fixtures/?event={gameweek['id']}") if pairs else []
-    live = fetch_json(f"{FPL_API_URL}/event/{gameweek['id']}/live/") if pairs else {}
+    fixtures = (
+        fetch_json(f"{FPL_API_URL}/fixtures/?event={gameweek['id']}")
+        if standings
+        else []
+    )
+    live = fetch_json(f"{FPL_API_URL}/event/{gameweek['id']}/live/") if standings else {}
     duo_importance = _format_duo_importance(
         pairs,
         gameweek["id"],
@@ -464,6 +653,14 @@ def fetch_standings(
         live.get("elements", []),
         fetch_json,
     )
+    team_details = _format_team_details(
+        standings,
+        entry_event_data,
+        bootstrap["elements"],
+        bootstrap.get("teams", []),
+        fixtures,
+        live.get("elements", []),
+    )
 
     return {
         "league": {"id": league["id"], "name": league["name"]},
@@ -472,6 +669,7 @@ def fetch_standings(
         "standings": standings,
         "pairs": pairs,
         "duoImportance": duo_importance,
+        "teamDetails": team_details,
     }
 
 

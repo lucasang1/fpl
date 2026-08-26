@@ -301,11 +301,28 @@ a:hover { color: #5f5f5f; }
 }
 
 .ownership-panel {
+  position: relative;
   overflow-x: auto;
   padding: 12px 8px 8px;
   border-radius: 12px;
   background: white;
   box-shadow: 0 8px 28px rgb(0 0 0 / 8%);
+}
+
+.ownership-panel::after {
+  content: "";
+  position: sticky;
+  z-index: 1;
+  bottom: 0;
+  display: none;
+  height: 28px;
+  margin-top: -28px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0), rgb(255 255 255 / 92%));
+}
+
+.ownership-panel-scrollable::after {
+  display: block;
 }
 
 .ownership-toolbar {

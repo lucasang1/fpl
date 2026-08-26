@@ -42,10 +42,15 @@ function syncOwnershipHeight() {
 
   if (!desktopLayout.matches) {
     ownershipPanel.style.maxHeight = "";
+    ownershipPanel.classList.remove("ownership-panel-scrollable");
     return;
   }
 
   ownershipPanel.style.maxHeight = `${standingsCard.getBoundingClientRect().height}px`;
+  ownershipPanel.classList.toggle(
+    "ownership-panel-scrollable",
+    ownershipPanel.scrollHeight > ownershipPanel.clientHeight + 1,
+  );
 }
 
 function createCell(value, className, label) {

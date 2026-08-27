@@ -500,12 +500,42 @@ class FormatTeamDetailsTests(unittest.TestCase):
         ]
 
         details = _format_team_details(
-            standings, entry_event_data, elements, teams, fixtures, live_elements
+            standings,
+            entry_event_data,
+            {
+                1: [
+                    {
+                        "event": 1,
+                        "element_in": 30,
+                        "element_out": 31,
+                        "time": "2024-08-17T11:00:00Z",
+                    },
+                    {
+                        "event": 1,
+                        "element_in": 40,
+                        "element_out": 41,
+                        "time": "2024-08-17T12:00:00Z",
+                    },
+                ],
+                2: [],
+            },
+            1,
+            elements,
+            teams,
+            fixtures,
+            live_elements,
         )
 
         self.assertEqual(details[0]["team"], "Alpha")
         self.assertEqual(details[0]["transfersMade"], 2)
         self.assertEqual(details[0]["transferCost"], 4)
+        self.assertEqual(
+            details[0]["transfers"],
+            [
+                {"in": "Saka", "out": "Palmer", "time": "2024-08-17T11:00:00Z"},
+                {"in": "Watkins", "out": "Haaland", "time": "2024-08-17T12:00:00Z"},
+            ],
+        )
         self.assertEqual(details[0]["chip"], "WC")
         self.assertEqual(details[0]["teamValue"], 101.3)
         self.assertEqual(details[0]["bank"], 0.7)
@@ -574,6 +604,9 @@ class UpdateStandingsTests(unittest.TestCase):
                     ]
                 }
 
+            if url.endswith("/transfers/"):
+                return []
+
             if "/fixtures/" in url:
                 return []
 
@@ -606,7 +639,7 @@ class UpdateStandingsTests(unittest.TestCase):
             )
             saved_output = json.loads(destination.read_text(encoding="utf-8"))
 
-        self.assertEqual(len(requested_urls), 9)
+        self.assertEqual(len(requested_urls), 11)
         self.assertEqual([team["rank"] for team in output["standings"]], [1, 2])
         self.assertEqual(
             [team["badgeUrl"] for team in output["standings"]],
@@ -638,6 +671,9 @@ class UpdateStandingsTests(unittest.TestCase):
                     "entry_history": {"event_transfers": 0, "value": 1000},
                     "picks": [{"element": 1, "multiplier": 1}],
                 }
+
+            if url.endswith("/transfers/"):
+                return []
 
             if "/fixtures/" in url:
                 return []

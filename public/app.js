@@ -20,20 +20,32 @@ const importanceDialog = document.querySelector("#importance-dialog");
 const importanceDialogTitle = document.querySelector("#importance-dialog-title");
 const importanceDialogBody = document.querySelector("#importance-dialog-body");
 const importanceDialogClose = document.querySelector("#importance-dialog-close");
+const transferDialog = document.createElement("div");
+const transferDialogBody = document.createElement("div");
 let standingsData;
 let activeView = "pairs";
 let activeTeamId;
 let activeDuoImportanceName = "";
 let updatedAt;
 let activeImportanceAnchor;
+let activeTransferAnchor;
 let importancePage = 0;
 let headerBaseFontSizes = [];
 let headerScaleFrame;
+let transferCloseTimer;
 const desktopLayout = window.matchMedia("(min-width: 901px)");
 const mobileLayout = window.matchMedia("(max-width: 700px)");
 const lastViewedTeamKey = "fpl:lastViewedTeamId";
 const importancePageSize = 15;
 let teamStatsFitFrame;
+
+transferDialog.id = "transfer-dialog";
+transferDialog.className = "importance-dialog transfer-dialog";
+transferDialog.hidden = true;
+transferDialog.setAttribute("role", "tooltip");
+transferDialogBody.className = "importance-dialog-body";
+transferDialog.append(transferDialogBody);
+document.body.append(transferDialog);
 
 function measureHeaderFontSizes() {
   if (!topBar) return;
@@ -77,23 +89,22 @@ function resetHeaderFontScale() {
 
 function scrollToTeamDetail() {
   if (!teamDetail || !topBar) {
-    teamDetail?.scrollIntoView({ behavior: "smooth", block: "start" });
+    teamDetail?.scrollIntoView({ behavior: "smooth", block: "end" });
     return;
   }
 
   const currentScrollPosition = window.scrollY;
-  const clearance = 8;
-  let destination = currentScrollPosition + teamDetail.getBoundingClientRect().top;
+  let destination = currentScrollPosition + teamDetail.getBoundingClientRect().bottom - window.innerHeight;
 
   // The sticky header changes height while scrolling, so measure the layout at
   // the projected destination until the required offset settles.
   for (let iteration = 0; iteration < 4; iteration += 1) {
     applyHeaderFontScale(getHeaderScale(destination));
-    const detailTop = window.scrollY + teamDetail.getBoundingClientRect().top;
+    const detailBottom = window.scrollY + teamDetail.getBoundingClientRect().bottom;
     const maximumScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
     const nextDestination = Math.min(
       maximumScroll,
-      Math.max(0, detailTop - topBar.getBoundingClientRect().height - clearance),
+      Math.max(0, detailBottom - window.innerHeight),
     );
 
     if (Math.abs(nextDestination - destination) < 0.5) {
@@ -623,6 +634,31 @@ function createTeamStat(label, value) {
   return stat;
 }
 
+function createTransferStat(detail) {
+  const stat = createTeamStat(
+    "Transfers",
+    formatTransfers(detail.transfersMade, detail.transferCost),
+  );
+  const open = () => openTransferDialog(detail, stat);
+  const close = () => scheduleCloseTransferDialog();
+
+  stat.classList.add("team-transfer-stat");
+  stat.tabIndex = 0;
+  stat.setAttribute("aria-describedby", transferDialog.id);
+  stat.addEventListener("mouseenter", open);
+  stat.addEventListener("focus", open);
+  stat.addEventListener("mouseleave", close);
+  stat.addEventListener("blur", close);
+  stat.addEventListener("click", () => {
+    if (activeTransferAnchor === stat && !transferDialog.hidden) {
+      closeTransferDialog();
+    } else {
+      open();
+    }
+  });
+  return stat;
+}
+
 function createGameweekScore(points) {
   const score = document.createElement("div");
   const label = document.createElement("span");
@@ -648,15 +684,83 @@ function formatTransfers(transfersMade, transferCost) {
   return transferCost > 0 ? `${transfers} (-${transferCost})` : transfers;
 }
 
+function createTransferList(detail) {
+  const section = document.createElement("section");
+  const transfers = detail.transfers || [];
+
+  if (!transfers.length) {
+    const empty = document.createElement("p");
+    empty.textContent = detail.transfersMade > 0
+      ? "Transfer details unavailable"
+      : "No transfers made";
+    section.append(empty);
+    return section;
+  }
+
+  const list = document.createElement("ul");
+  for (const transfer of transfers) {
+    const item = document.createElement("li");
+    item.textContent = `${transfer.out} -> ${transfer.in}`;
+    list.append(item);
+  }
+  section.append(list);
+  return section;
+}
+
+function positionTransferDialog(anchor) {
+  if (transferDialog.hidden || !anchor) return;
+
+  const spacing = 8;
+  const viewportPadding = 12;
+  const anchorRect = anchor.getBoundingClientRect();
+  const dialogWidth = transferDialog.offsetWidth;
+  const dialogHeight = transferDialog.offsetHeight;
+  const maxLeft = window.innerWidth - dialogWidth - viewportPadding;
+  const belowTop = anchorRect.bottom + spacing;
+  const aboveTop = anchorRect.top - dialogHeight - spacing;
+  const left = Math.max(
+    viewportPadding,
+    Math.min(anchorRect.left + (anchorRect.width - dialogWidth) / 2, maxLeft),
+  );
+  const top = belowTop + dialogHeight <= window.innerHeight - viewportPadding
+    ? belowTop
+    : Math.max(viewportPadding, aboveTop);
+
+  transferDialog.style.left = `${left}px`;
+  transferDialog.style.top = `${top}px`;
+}
+
+function openTransferDialog(detail, anchor) {
+  clearTimeout(transferCloseTimer);
+  activeTransferAnchor = anchor;
+  transferDialogBody.replaceChildren(createTransferList(detail));
+  transferDialog.hidden = false;
+  positionTransferDialog(anchor);
+}
+
+function scheduleCloseTransferDialog() {
+  clearTimeout(transferCloseTimer);
+  transferCloseTimer = setTimeout(closeTransferDialog, 120);
+}
+
+function closeTransferDialog() {
+  clearTimeout(transferCloseTimer);
+  transferDialog.hidden = true;
+  activeTransferAnchor = undefined;
+}
+
 function renderTeamDetail() {
   if (!teamDetail || activeTeamId === undefined) return;
 
   const detail = findTeamDetail(activeTeamId);
   const standingsTeam = findStandingsTeam(activeTeamId);
   if (!detail || !standingsTeam) {
+    closeTransferDialog();
     teamDetail.replaceChildren();
     return;
   }
+
+  closeTransferDialog();
 
   const header = document.createElement("div");
   const titleGroup = document.createElement("div");
@@ -675,7 +779,7 @@ function renderTeamDetail() {
   stats.className = "team-detail-stats";
   stats.append(
     createTeamStat("Total Pts", detail.totalPoints),
-    createTeamStat("Transfers", formatTransfers(detail.transfersMade, detail.transferCost)),
+    createTransferStat(detail),
     createTeamStat("Chip", formatChipName(detail.chip)),
     createTeamStat("Value", formatTeamValueWithBank(detail.teamValue, detail.bank)),
   );
@@ -700,6 +804,7 @@ function openTeamDetail(teamId) {
   activeTeamId = teamId;
   saveTeamId(teamId);
   closeImportanceDialog();
+  closeTransferDialog();
   renderActiveView();
   renderOwnership();
   requestAnimationFrame(scrollToTeamDetail);
@@ -860,9 +965,18 @@ importanceDialog.addEventListener("click", (event) => {
 importanceDialog.addEventListener("close", () => {
   activeImportanceAnchor = undefined;
 });
-window.addEventListener("scroll", scheduleHeaderFontScale, { passive: true });
+transferDialog.addEventListener("mouseenter", () => clearTimeout(transferCloseTimer));
+transferDialog.addEventListener("mouseleave", scheduleCloseTransferDialog);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeTransferDialog();
+});
+window.addEventListener("scroll", () => {
+  scheduleHeaderFontScale();
+  positionTransferDialog(activeTransferAnchor);
+}, { passive: true });
 window.addEventListener("resize", () => {
   positionImportanceDialog(activeImportanceAnchor);
+  positionTransferDialog(activeTransferAnchor);
   resetHeaderFontScale();
 });
 desktopLayout.addEventListener("change", syncOwnershipHeight);

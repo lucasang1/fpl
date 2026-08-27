@@ -637,6 +637,22 @@ a:hover { color: #5f5f5f; }
   white-space: nowrap;
 }
 
+.team-transfer-stat {
+  cursor: help;
+}
+
+.team-transfer-stat:hover strong,
+.team-transfer-stat:focus-visible strong {
+  color: #5f5f5f;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.team-transfer-stat:focus-visible {
+  outline: 2px solid #242424;
+  outline-offset: 3px;
+}
+
 .team-player-list {
   --ownership-columns: minmax(90px, 1fr) minmax(5ch, max-content) minmax(6ch, max-content) minmax(5ch, max-content);
 }
@@ -680,6 +696,25 @@ a:hover { color: #5f5f5f; }
 
 .importance-dialog::backdrop {
   background: rgb(0 0 0 / 8%);
+}
+
+.transfer-dialog {
+  z-index: 20;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+}
+
+.transfer-dialog[hidden] {
+  display: none;
+}
+
+.transfer-dialog .importance-dialog-body {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.transfer-dialog li {
+  white-space: nowrap;
 }
 
 .importance-dialog-header {

@@ -151,6 +151,24 @@ def _fetch_chips(
     }
 
 
+def _fetch_transfer_data(
+    entries: Iterable[JsonObject], fetch_json: JsonFetcher
+) -> dict[int, list[JsonObject]]:
+    def fetch_transfers(entry: JsonObject) -> tuple[int, list[JsonObject]]:
+        entry_id = entry["entry"]
+        try:
+            data = fetch_json(f"{FPL_API_URL}/entry/{entry_id}/transfers/")
+        except Exception:
+            data = []
+        return entry_id, data if isinstance(data, list) else []
+
+    entries = list(entries)
+    if not entries:
+        return {}
+    with ThreadPoolExecutor(max_workers=min(8, len(entries))) as executor:
+        return dict(executor.map(fetch_transfers, entries))
+
+
 def _fetch_entry_event_data(
     entries: Iterable[JsonObject], gameweek_id: int, fetch_json: JsonFetcher
 ) -> dict[int, JsonObject]:
@@ -484,9 +502,39 @@ def _format_bank(entry_history: JsonObject, picks: Iterable[JsonObject]) -> floa
     return _format_team_value(value - sum(selling_prices))
 
 
+def _format_transfers(
+    transfers: Iterable[JsonObject],
+    gameweek_id: int,
+    players: dict[int, JsonObject],
+) -> list[JsonObject]:
+    formatted = []
+    for transfer in transfers:
+        if transfer.get("event") != gameweek_id:
+            continue
+
+        player_in_id = transfer.get("element_in")
+        player_out_id = transfer.get("element_out")
+        formatted.append(
+            {
+                "in": players.get(player_in_id, {}).get(
+                    "name", f"Player {player_in_id}"
+                ),
+                "out": players.get(player_out_id, {}).get(
+                    "name", f"Player {player_out_id}"
+                ),
+                "time": transfer.get("time"),
+            }
+        )
+
+    formatted.sort(key=lambda transfer: transfer.get("time") or "")
+    return formatted
+
+
 def _format_team_details(
     standings: Iterable[JsonObject],
     entry_event_data: dict[int, JsonObject],
+    transfer_data: dict[int, list[JsonObject]],
+    gameweek_id: int,
     elements: Iterable[JsonObject],
     teams: Iterable[JsonObject],
     fixtures: Iterable[JsonObject],
@@ -589,6 +637,9 @@ def _format_team_details(
                 "totalPoints": team["totalPoints"],
                 "transfersMade": entry_history.get("event_transfers", 0),
                 "transferCost": entry_history.get("event_transfers_cost", 0),
+                "transfers": _format_transfers(
+                    transfer_data.get(entry_id, []), gameweek_id, players
+                ),
                 "chip": CHIP_LABELS.get(event_data.get("active_chip")),
                 "teamValue": _format_team_value(entry_history.get("value")),
                 "bank": _format_bank(entry_history, event_picks),
@@ -702,6 +753,7 @@ def fetch_standings(
     league, entries = _fetch_league(fetch_json)
     badges = _fetch_badges(entries, fetch_json)
     entry_event_data = _fetch_entry_event_data(entries, gameweek["id"], fetch_json)
+    transfer_data = _fetch_transfer_data(entries, fetch_json)
     chips = _format_chips(entry_event_data)
     standings = _format_standings(entries, gameweek["id"], badges, chips)
     pairs = _format_pairs(standings, pairings)
@@ -723,6 +775,8 @@ def fetch_standings(
     team_details = _format_team_details(
         standings,
         entry_event_data,
+        transfer_data,
+        gameweek["id"],
         bootstrap["elements"],
         bootstrap.get("teams", []),
         fixtures,

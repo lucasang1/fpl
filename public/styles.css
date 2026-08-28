@@ -397,6 +397,17 @@ th:nth-child(2) { width: 38%; }
 th:nth-child(4),
 th:nth-child(5) { width: 88px; }
 
+.standings-table th:first-child,
+.standings-table td:first-child {
+  width: 56px;
+  padding-left: 24px;
+}
+
+.standings-table th:last-child,
+.standings-table td:last-child {
+  padding-right: 24px;
+}
+
 th {
   color: var(--muted);
   font-size: .75rem;
@@ -646,6 +657,17 @@ a:hover { color: var(--muted); }
   width: 18px;
   height: 18px;
   object-fit: contain;
+}
+
+.player-crest-liverpool {
+  display: inline-block;
+  background: white;
+  -webkit-mask: var(--player-crest-url) center / contain no-repeat;
+  mask: var(--player-crest-url) center / contain no-repeat;
+}
+
+:root:not([data-theme="dark"]) .player-crest-liverpool {
+  background: #ab0723;
 }
 
 .player-name-text {
@@ -1164,8 +1186,20 @@ a:hover { color: var(--muted); }
 
   th:nth-child(1) { width: 32px; }
   th:nth-child(2) { width: 39%; }
+  th:nth-child(3) { width: 80px; }
   th:nth-child(4),
   th:nth-child(5) { width: 38px; }
+
+  .standings-table th:first-child,
+  .standings-table td:first-child {
+    width: 24px;
+    padding-left: 8px;
+  }
+
+  .standings-table th:last-child,
+  .standings-table td:last-child {
+    padding-right: 8px;
+  }
 
   .team-link { gap: 4px; }
 

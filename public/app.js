@@ -592,13 +592,17 @@ function positionImportanceDialog(anchor) {
   const spacing = 8;
   const viewportPadding = 12;
   const anchorRect = anchor.getBoundingClientRect();
+  const nameRect = anchor.querySelector(".player-name-text")?.getBoundingClientRect();
+  const anchorRight = mobileLayout.matches && nameRect
+    ? nameRect.right
+    : anchorRect.right;
   const dialogWidth = importanceDialog.offsetWidth;
   const dialogHeight = importanceDialog.offsetHeight;
   const maxLeft = window.innerWidth - dialogWidth - viewportPadding;
   const maxTop = window.innerHeight - dialogHeight - viewportPadding;
   const left = Math.max(
     viewportPadding,
-    Math.min(anchorRect.right + spacing, maxLeft),
+    Math.min(anchorRight + spacing, maxLeft),
   );
   const top = Math.max(
     viewportPadding,
@@ -680,12 +684,19 @@ function createPlayerNameContent(player, label) {
   const crestUrl = playerCrestUrl(player);
 
   if (crestUrl) {
-    const crest = document.createElement("img");
+    const isLiverpool = String(player.teamCode) === "14";
+    const crest = document.createElement(isLiverpool ? "span" : "img");
     crest.className = "player-crest";
-    crest.src = crestUrl;
-    crest.alt = "";
-    crest.loading = "lazy";
-    crest.decoding = "async";
+    if (isLiverpool) {
+      crest.classList.add("player-crest-liverpool");
+      crest.setAttribute("aria-hidden", "true");
+      crest.style.setProperty("--player-crest-url", `url("${crestUrl}")`);
+    } else {
+      crest.src = crestUrl;
+      crest.alt = "";
+      crest.loading = "lazy";
+      crest.decoding = "async";
+    }
     fragment.append(crest);
   }
 

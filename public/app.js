@@ -428,16 +428,29 @@ function createTeamLink(team) {
   link.append(createTeamBadge(team));
 
   const teamNameGroup = document.createElement("span");
+  const teamNameLine = document.createElement("span");
   const teamName = document.createElement("span");
   teamNameGroup.className = "team-name";
+  teamNameLine.className = "team-name-line";
   teamName.textContent = team.team;
-  teamNameGroup.append(teamName);
+  teamNameLine.append(teamName);
 
   if (team.chip) {
     const chip = document.createElement("span");
     chip.className = "chip-pill";
     chip.textContent = team.chip;
-    teamNameGroup.append(chip);
+    teamNameLine.append(chip);
+  }
+
+  teamNameGroup.append(teamNameLine);
+
+  const teamDetail = standingsData?.teamDetails?.find((detail) => detail.id === team.id);
+  const captain = teamDetail?.players?.find((player) => player.isCaptain);
+  if (captain) {
+    const captainName = document.createElement("span");
+    captainName.className = "team-captain";
+    captainName.textContent = captain.name;
+    teamNameGroup.append(captainName);
   }
 
   link.append(teamNameGroup);
@@ -582,10 +595,10 @@ function createTeamPickContent(team) {
   return fragment;
 }
 
-function createTeamPickSection(title, teams, totalTeams = teams.length) {
+function createTeamPickSection(title, teams) {
   const section = document.createElement("section");
   const heading = document.createElement("h4");
-  heading.textContent = `${title} (${teams.length}/${totalTeams})`;
+  heading.textContent = `${title} (${teams.length})`;
   section.append(heading);
 
   if (!teams.length) {
@@ -667,7 +680,6 @@ function openImportanceDialog(player, anchor) {
   const teams = player.teams || {};
   const startedTeams = teams.started || [];
   const benchedTeams = teams.benched || [];
-  const totalTeams = startedTeams.length + benchedTeams.length;
   clearTimeout(importanceCloseTimer);
   if (importanceDialog.open && activeImportanceMode !== mode) {
     closeImportanceDialog();
@@ -677,8 +689,8 @@ function openImportanceDialog(player, anchor) {
   importanceDialog.classList.toggle("importance-dialog-hover", usePopover);
   importanceDialogTitle.textContent = player.name;
   importanceDialogBody.replaceChildren(
-    createTeamPickSection("Started", startedTeams, totalTeams),
-    createTeamPickSection("Benched", benchedTeams, totalTeams),
+    createTeamPickSection("Started", startedTeams),
+    createTeamPickSection("Benched", benchedTeams),
     createPointDetails(player.pointDetails),
   );
 

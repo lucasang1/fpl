@@ -492,11 +492,30 @@ a:hover { color: var(--muted); }
 }
 
 .team-name {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.team-name-line {
+  display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
-  overflow-wrap: anywhere;
+}
+
+.team-captain {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .75rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chip-pill {
@@ -544,8 +563,8 @@ a:hover { color: var(--muted); }
 }
 
 .team-badge {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 0;
   object-fit: cover;
   flex: 0 0 auto;
@@ -1330,15 +1349,17 @@ a:hover { color: var(--muted); }
 
   .manager { gap: 4px; }
 
-  .team-name {
-    gap: 3px;
-  }
+  .team-name { gap: 0; }
 
-  .team-name > span:first-child {
+  .team-name-line { gap: 3px; }
+
+  .team-name-line > span:first-child {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  .team-captain { font-size: .4rem; }
 
   .chip-pill {
     min-width: 2em;
@@ -1359,8 +1380,8 @@ a:hover { color: var(--muted); }
   }
 
   .team-badge {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
   }
 
   .manager-headshot {
@@ -1368,7 +1389,7 @@ a:hover { color: var(--muted); }
     height: 20px;
   }
 
-  .pair-members > * { min-height: 20px; }
+  .pair-members > * { min-height: 24px; }
   .pair-members > * + * { margin-top: 4px; }
   .pair-members-centered > :not(.pair-member-placeholder) {
     transform: translateY(12px);

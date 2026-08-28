@@ -29,6 +29,7 @@ let activeTeamId;
 let activeDuoImportanceName = "";
 let updatedAt;
 let activeImportanceAnchor;
+let activeImportanceMode = "modal";
 let activeTransferAnchor;
 let importancePage = 0;
 const importancePageSize = 15;
@@ -41,6 +42,7 @@ const importancePageSize = 15;
  */
 let headerBaseFontSizes = [];
 let headerScaleFrame;
+let importanceCloseTimer;
 let transferCloseTimer;
 const desktopLayout = window.matchMedia("(min-width: 901px)");
 const mobileLayout = window.matchMedia("(max-width: 700px)");
@@ -559,8 +561,25 @@ function formatChipName(chip) {
   return chipNames[chip] || chip || "-";
 }
 
-function formatTeamPick(team) {
-  return `${team.name}${team.captain ? " (C)" : ""}`;
+function createCaptainPill(label) {
+  const pill = document.createElement("span");
+  pill.className = `captain-pill captain-pill-${label.toLowerCase()}`;
+  pill.textContent = label;
+  pill.setAttribute("aria-label", label === "C" ? "Captain" : "Vice captain");
+  return pill;
+}
+
+function createTeamPickContent(team) {
+  const fragment = document.createDocumentFragment();
+  const name = document.createElement("span");
+  name.textContent = team.name;
+  fragment.append(name);
+
+  if (team.captain) {
+    fragment.append(createCaptainPill("C"));
+  }
+
+  return fragment;
 }
 
 function createTeamPickSection(title, teams, totalTeams = teams.length) {
@@ -571,7 +590,7 @@ function createTeamPickSection(title, teams, totalTeams = teams.length) {
 
   if (!teams.length) {
     const empty = document.createElement("p");
-    empty.textContent = "None";
+    empty.textContent = "-";
     section.append(empty);
     return section;
   }
@@ -579,46 +598,83 @@ function createTeamPickSection(title, teams, totalTeams = teams.length) {
   const list = document.createElement("ul");
   for (const team of teams) {
     const item = document.createElement("li");
-    item.textContent = formatTeamPick(team);
+    item.className = "team-pick-item";
+    item.replaceChildren(createTeamPickContent(team));
     list.append(item);
   }
   section.append(list);
   return section;
 }
 
+function usesDesktopPlayerPopover() {
+  return desktopLayout.matches && hoverLayout.matches;
+}
+
+function importanceDialogRow(anchor) {
+  return anchor?.closest(".ownership-row") || anchor;
+}
+
+function importanceDialogContainer(anchor) {
+  return anchor?.closest(".team-player-row") ? teamDetail : ownershipPanel;
+}
+
+function importanceDialogSide(anchor) {
+  return anchor?.closest(".team-player-row") ? "left" : "right";
+}
+
 function positionImportanceDialog(anchor) {
   if (!importanceDialog?.open || !anchor) return;
 
-  const spacing = 8;
+  const isPopover = activeImportanceMode === "popover";
+  const spacing = isPopover ? 12 : 8;
   const viewportPadding = 12;
   const anchorRect = anchor.getBoundingClientRect();
-  const nameRect = anchor.querySelector(".player-name-text")?.getBoundingClientRect();
-  const anchorRight = mobileLayout.matches && nameRect
-    ? nameRect.right
-    : anchorRect.right;
   const dialogWidth = importanceDialog.offsetWidth;
   const dialogHeight = importanceDialog.offsetHeight;
   const maxLeft = window.innerWidth - dialogWidth - viewportPadding;
   const maxTop = window.innerHeight - dialogHeight - viewportPadding;
-  const left = Math.max(
-    viewportPadding,
-    Math.min(anchorRight + spacing, maxLeft),
-  );
-  const top = Math.max(
-    viewportPadding,
-    Math.min(anchorRect.top - spacing, maxTop),
-  );
+  let left;
+  let top;
+
+  if (isPopover) {
+    const rowRect = importanceDialogRow(anchor).getBoundingClientRect();
+    const containerRect = importanceDialogContainer(anchor)?.getBoundingClientRect() || anchorRect;
+    left = importanceDialogSide(anchor) === "left"
+      ? containerRect.left - dialogWidth - spacing
+      : containerRect.right + spacing;
+    top = rowRect.top;
+  } else {
+    const nameRect = anchor.querySelector(".player-name-text")?.getBoundingClientRect();
+    const anchorRight = mobileLayout.matches && nameRect
+      ? nameRect.right
+      : anchorRect.right;
+    left = anchorRight + spacing;
+    top = anchorRect.top - spacing;
+  }
+
+  left = Math.max(viewportPadding, Math.min(left, maxLeft));
+  top = isPopover
+    ? Math.max(viewportPadding, top)
+    : Math.max(viewportPadding, Math.min(top, maxTop));
 
   importanceDialog.style.left = `${left}px`;
   importanceDialog.style.top = `${top}px`;
 }
 
 function openImportanceDialog(player, anchor) {
+  const usePopover = usesDesktopPlayerPopover();
+  const mode = usePopover ? "popover" : "modal";
   const teams = player.teams || {};
   const startedTeams = teams.started || [];
   const benchedTeams = teams.benched || [];
   const totalTeams = startedTeams.length + benchedTeams.length;
+  clearTimeout(importanceCloseTimer);
+  if (importanceDialog.open && activeImportanceMode !== mode) {
+    closeImportanceDialog();
+  }
   activeImportanceAnchor = anchor;
+  activeImportanceMode = mode;
+  importanceDialog.classList.toggle("importance-dialog-hover", usePopover);
   importanceDialogTitle.textContent = player.name;
   importanceDialogBody.replaceChildren(
     createTeamPickSection("Started", startedTeams, totalTeams),
@@ -627,7 +683,11 @@ function openImportanceDialog(player, anchor) {
   );
 
   if (!importanceDialog.open) {
-    importanceDialog.showModal();
+    if (usePopover) {
+      importanceDialog.show();
+    } else {
+      importanceDialog.showModal();
+    }
   }
   positionImportanceDialog(anchor);
 }
@@ -670,8 +730,42 @@ function createPointDetails(pointDetails) {
 }
 
 function closeImportanceDialog() {
+  clearTimeout(importanceCloseTimer);
   if (importanceDialog?.open) importanceDialog.close();
   activeImportanceAnchor = undefined;
+  activeImportanceMode = "modal";
+  importanceDialog?.classList.remove("importance-dialog-hover");
+}
+
+function scheduleCloseImportanceDialog() {
+  if (!usesDesktopPlayerPopover()) return;
+
+  clearTimeout(importanceCloseTimer);
+  importanceCloseTimer = setTimeout(() => {
+    const activeRow = importanceDialogRow(activeImportanceAnchor);
+    const hasHover = activeRow?.matches(":hover") || importanceDialog?.matches(":hover");
+
+    if (!hasHover) closeImportanceDialog();
+  }, 140);
+}
+
+function addPlayerDialogInteractions(row, button, getPlayer) {
+  const openDesktopPopover = () => {
+    if (usesDesktopPlayerPopover()) openImportanceDialog(getPlayer(), button);
+  };
+  const openMobileDialog = (event) => {
+    if (usesDesktopPlayerPopover()) {
+      event.preventDefault();
+      return;
+    }
+    openImportanceDialog(getPlayer(), button);
+  };
+
+  row.addEventListener("mouseenter", openDesktopPopover);
+  row.addEventListener("mouseleave", scheduleCloseImportanceDialog);
+  button.addEventListener("focus", openDesktopPopover);
+  button.addEventListener("blur", scheduleCloseImportanceDialog);
+  button.addEventListener("click", openMobileDialog);
 }
 
 function playerCrestUrl(player) {
@@ -679,7 +773,7 @@ function playerCrestUrl(player) {
   return `https://resources.premierleague.com/premierleague/badges/t${player.teamCode}.png`;
 }
 
-function createPlayerNameContent(player, label) {
+function createPlayerNameContent(player, label, captainLabel = "") {
   const fragment = document.createDocumentFragment();
   const crestUrl = playerCrestUrl(player);
 
@@ -690,7 +784,6 @@ function createPlayerNameContent(player, label) {
     if (isLiverpool) {
       crest.classList.add("player-crest-liverpool");
       crest.setAttribute("aria-hidden", "true");
-      crest.style.setProperty("--player-crest-url", `url("${crestUrl}")`);
     } else {
       crest.src = crestUrl;
       crest.alt = "";
@@ -704,6 +797,11 @@ function createPlayerNameContent(player, label) {
   text.className = "player-name-text";
   text.textContent = label;
   fragment.append(text);
+
+  if (captainLabel) {
+    fragment.append(createCaptainPill(captainLabel));
+  }
+
   return fragment;
 }
 
@@ -727,7 +825,7 @@ function createImportanceRow(player) {
     name.classList.add("negative-importance");
     importance.classList.add("negative-importance");
   }
-  name.addEventListener("click", () => openImportanceDialog(player, name));
+  addPlayerDialogInteractions(row, name, () => player);
   row.append(name, opponent, fixtureTime, points, importance);
   return row;
 }
@@ -747,10 +845,10 @@ function playerWithImportanceTeams(player) {
   };
 }
 
-function playerDisplayName(player) {
-  if (player.isCaptain) return `${player.name} (C)`;
-  if (player.isViceCaptain) return `${player.name} (VC)`;
-  return player.name;
+function playerCaptainLabel(player) {
+  if (player.isCaptain) return "C";
+  if (player.isViceCaptain) return "VC";
+  return "";
 }
 
 function createTeamPlayerRow(player) {
@@ -764,17 +862,19 @@ function createTeamPlayerRow(player) {
   if (player.isBenched) row.classList.add("team-player-row-benched");
   name.className = "importance-player-button team-player-name";
   name.type = "button";
-  name.replaceChildren(createPlayerNameContent(player, playerDisplayName(player)));
+  name.replaceChildren(createPlayerNameContent(player, player.name, playerCaptainLabel(player)));
   opponent.textContent = player.opponent;
   fixtureTime.textContent = player.fixtureTime || "-";
   points.textContent = player.points;
   const openPlayerTeams = () => {
     openImportanceDialog(playerWithImportanceTeams(player), name);
   };
-  row.addEventListener("click", openPlayerTeams);
+  addPlayerDialogInteractions(row, name, () => playerWithImportanceTeams(player));
+  row.addEventListener("click", () => {
+    if (!usesDesktopPlayerPopover()) openPlayerTeams();
+  });
   name.addEventListener("click", (event) => {
     event.stopPropagation();
-    openPlayerTeams();
   });
   row.append(name, opponent, fixtureTime, points);
   return row;
@@ -1170,6 +1270,10 @@ importanceNext.addEventListener("click", () => {
   renderOwnership();
 });
 importanceDialogClose.addEventListener("click", closeImportanceDialog);
+importanceDialog.addEventListener("mouseenter", () => clearTimeout(importanceCloseTimer));
+importanceDialog.addEventListener("mouseleave", scheduleCloseImportanceDialog);
+importanceDialog.addEventListener("focusin", () => clearTimeout(importanceCloseTimer));
+importanceDialog.addEventListener("focusout", scheduleCloseImportanceDialog);
 importanceDialog.addEventListener("click", (event) => {
   if (event.target === importanceDialog) closeImportanceDialog();
 });
@@ -1179,10 +1283,12 @@ importanceDialog.addEventListener("close", () => {
 transferDialog.addEventListener("mouseenter", () => clearTimeout(transferCloseTimer));
 transferDialog.addEventListener("mouseleave", scheduleCloseTransferDialog);
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeImportanceDialog();
   if (event.key === "Escape") closeTransferDialog();
 });
 window.addEventListener("scroll", () => {
   scheduleHeaderFontScale();
+  positionImportanceDialog(activeImportanceAnchor);
   positionTransferDialog(activeTransferAnchor);
 }, { passive: true });
 window.addEventListener("resize", () => {
@@ -1191,10 +1297,17 @@ window.addEventListener("resize", () => {
   resetHeaderFontScale();
 });
 desktopLayout.addEventListener("change", syncOwnershipHeight);
+hoverLayout.addEventListener("change", closeImportanceDialog);
 mobileLayout.addEventListener("change", () => {
   importancePage = 0;
   renderOwnership();
 });
+ownershipPanel?.addEventListener("scroll", () => {
+  positionImportanceDialog(activeImportanceAnchor);
+}, { passive: true });
+teamDetail?.addEventListener("scroll", () => {
+  positionImportanceDialog(activeImportanceAnchor);
+}, { passive: true });
 if (standingsCard) {
   new ResizeObserver(syncOwnershipHeight).observe(standingsCard);
 }

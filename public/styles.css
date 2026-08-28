@@ -164,6 +164,7 @@ main {
     padding-bottom: 0;
   }
 
+  .ownership-panel .importance-player-button,
   .team-player-name {
     justify-self: start;
     max-width: 100%;
@@ -408,6 +409,22 @@ th:nth-child(5) { width: 88px; }
   padding-right: 24px;
 }
 
+.standings-table th:nth-child(3),
+.standings-table td:nth-child(3) {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.standings-table td:nth-child(3) {
+  position: relative;
+  z-index: 1;
+}
+
+.standings-table td:nth-child(3) .manager {
+  max-width: none;
+  white-space: nowrap;
+}
+
 th {
   color: var(--muted);
   font-size: .75rem;
@@ -492,6 +509,34 @@ a:hover { color: var(--muted); }
   text-transform: uppercase;
 }
 
+.captain-pill {
+  --captain-pill-height: calc(.58rem * 1.35 + 3.4px);
+
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--captain-pill-height);
+  height: var(--captain-pill-height);
+  padding: 0 5px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--button-text);
+  background: var(--button-bg);
+  font-size: .58rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.captain-pill-c {
+  width: var(--captain-pill-height);
+  padding: 0;
+  border-radius: 50%;
+}
+
 .team-badge {
   width: 32px;
   height: 32px;
@@ -563,8 +608,10 @@ a:hover { color: var(--muted); }
   background: linear-gradient(to bottom, transparent, var(--surface));
 }
 
-.ownership-panel-scrollable::after {
-  display: block;
+@media (min-width: 901px) {
+  .ownership-panel-scrollable::after {
+    display: block;
+  }
 }
 
 .ownership-toolbar {
@@ -661,13 +708,11 @@ a:hover { color: var(--muted); }
 
 .player-crest-liverpool {
   display: inline-block;
-  background: white;
-  -webkit-mask: var(--player-crest-url) center / contain no-repeat;
-  mask: var(--player-crest-url) center / contain no-repeat;
+  background: center / contain no-repeat url("liverpool%20(light).png");
 }
 
-:root:not([data-theme="dark"]) .player-crest-liverpool {
-  background: #ab0723;
+:root[data-theme="dark"] .player-crest-liverpool {
+  background-image: url("liverpool%20(dark).png");
 }
 
 .player-name-text {
@@ -677,10 +722,24 @@ a:hover { color: var(--muted); }
   white-space: nowrap;
 }
 
+.team-pick-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.team-pick-item > span:first-child {
+  min-width: 0;
+}
+
 .importance-player-button:hover,
 .importance-player-button:focus-visible {
   color: var(--muted);
   background: transparent;
+}
+
+.importance-player-button:hover .player-name-text,
+.importance-player-button:focus-visible .player-name-text {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -939,11 +998,16 @@ a:hover { color: var(--muted); }
   color: var(--muted-soft);
 }
 
+.team-player-row-benched .captain-pill {
+  color: var(--button-text);
+}
+
 .importance-dialog {
   position: fixed;
   right: auto;
   bottom: auto;
-  width: min(240px, calc(100vw - 24px));
+  width: min(260px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
   margin: 0;
   padding: 0;
   border: 1px solid var(--border-soft);
@@ -951,10 +1015,23 @@ a:hover { color: var(--muted); }
   color: var(--strong);
   background: var(--surface);
   box-shadow: var(--dialog-shadow);
+  overflow: auto;
 }
 
 .importance-dialog::backdrop {
   background: var(--backdrop);
+}
+
+.importance-dialog:focus {
+  outline: none;
+}
+
+.importance-dialog-hover::backdrop {
+  background: transparent;
+}
+
+.importance-dialog-hover .importance-dialog-header {
+  display: none;
 }
 
 .transfer-dialog {
@@ -1035,6 +1112,7 @@ a:hover { color: var(--muted); }
   font-size: inherit;
   font-weight: 800;
   letter-spacing: .05em;
+  white-space: nowrap;
   text-transform: uppercase;
 }
 
@@ -1094,7 +1172,7 @@ a:hover { color: var(--muted); }
   padding-top: 6px;
   border-top: 2px solid var(--border-strong);
   color: var(--strong);
-  font-size: .62rem;
+  font-size: inherit;
   font-weight: 800;
 }
 
@@ -1184,7 +1262,7 @@ a:hover { color: var(--muted); }
     background: var(--table-row-hover-bg);
   }
 
-  th:nth-child(1) { width: 32px; }
+  th:nth-child(1) { width: 2px; }
   th:nth-child(2) { width: 39%; }
   th:nth-child(3) { width: 80px; }
   th:nth-child(4),
@@ -1192,7 +1270,7 @@ a:hover { color: var(--muted); }
 
   .standings-table th:first-child,
   .standings-table td:first-child {
-    width: 24px;
+    width: 15px;
     padding-left: 8px;
   }
 
@@ -1220,6 +1298,17 @@ a:hover { color: var(--muted); }
     padding: 0 4px;
     font-size: .5rem;
     line-height: 1.3;
+  }
+
+  .captain-pill {
+    --captain-pill-height: calc(.5rem * 1.3 + 2px);
+
+    padding: 0 4px;
+    font-size: .5rem;
+  }
+
+  .captain-pill-c {
+    padding: 0;
   }
 
   .team-badge {

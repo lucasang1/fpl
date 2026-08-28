@@ -20,6 +20,7 @@ const importanceDialog = document.querySelector("#importance-dialog");
 const importanceDialogTitle = document.querySelector("#importance-dialog-title");
 const importanceDialogBody = document.querySelector("#importance-dialog-body");
 const importanceDialogClose = document.querySelector("#importance-dialog-close");
+const themeToggle = document.querySelector("#theme-toggle");
 const transferDialog = document.createElement("div");
 const transferDialogBody = document.createElement("div");
 let standingsData;
@@ -30,13 +31,28 @@ let updatedAt;
 let activeImportanceAnchor;
 let activeTransferAnchor;
 let importancePage = 0;
+const importancePageSize = 15;
+/*
+ * Desktop importance-card pagination experiment, parked for now.
+ * Keeping this commented makes it easy to bring back without redoing the sizing work.
+ *
+ * let activeImportancePageSize = 14;
+ * let isRenderingOwnership = false;
+ */
 let headerBaseFontSizes = [];
 let headerScaleFrame;
 let transferCloseTimer;
 const desktopLayout = window.matchMedia("(min-width: 901px)");
 const mobileLayout = window.matchMedia("(max-width: 700px)");
+const preferredDarkTheme = window.matchMedia("(prefers-color-scheme: dark)");
 const lastViewedTeamKey = "fpl:lastViewedTeamId";
-const importancePageSize = 15;
+const themeStorageKey = "fpl:theme";
+/*
+ * Desktop importance-card pagination experiment, parked for now.
+ *
+ * const maxImportancePageSize = 14;
+ * const fallbackImportanceRowHeight = 31;
+ */
 let teamStatsFitFrame;
 
 transferDialog.id = "transfer-dialog";
@@ -46,6 +62,52 @@ transferDialog.setAttribute("role", "tooltip");
 transferDialogBody.className = "importance-dialog-body";
 transferDialog.append(transferDialogBody);
 document.body.append(transferDialog);
+
+function getStoredTheme() {
+  try {
+    const theme = localStorage.getItem(themeStorageKey);
+    return theme === "dark" || theme === "light" ? theme : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function saveTheme(theme) {
+  try {
+    localStorage.setItem(themeStorageKey, theme);
+  } catch {
+    // Theme switching should keep working even when storage is unavailable.
+  }
+}
+
+function getPreferredTheme() {
+  return preferredDarkTheme.matches ? "dark" : "light";
+}
+
+function updateThemeToggle(theme) {
+  if (!themeToggle) return;
+
+  const nextTheme = theme === "dark" ? "light" : "dark";
+  themeToggle.setAttribute("aria-label", `Switch to ${nextTheme} mode`);
+  themeToggle.title = `Switch to ${nextTheme} mode`;
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  updateThemeToggle(theme);
+}
+
+function setTheme(theme) {
+  applyTheme(theme);
+  saveTheme(theme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  setTheme(currentTheme === "dark" ? "light" : "dark");
+}
+
+applyTheme(getStoredTheme() || getPreferredTheme());
 
 function measureHeaderFontSizes() {
   if (!topBar) return;
@@ -248,16 +310,64 @@ function syncOwnershipHeight() {
     return;
   }
 
-  const standingsHeight = `${standingsCard.getBoundingClientRect().height}px`;
-  ownershipPanel.style.maxHeight = standingsHeight;
-  ownershipPanel.style.height = activeTeamId === undefined ? "" : standingsHeight;
-  teamDetail.style.maxHeight = activeTeamId === undefined ? "" : standingsHeight;
-  teamDetail.style.height = activeTeamId === undefined ? "" : standingsHeight;
+  teamDetail.style.maxHeight = "";
+  teamDetail.style.height = "";
+
+  const teamDetailHeight = teamDetail.hidden
+    ? standingsCard.getBoundingClientRect().height
+    : teamDetail.getBoundingClientRect().height;
+  const cardHeight = `${teamDetailHeight}px`;
+  ownershipPanel.style.maxHeight = cardHeight;
+  ownershipPanel.style.height = activeTeamId === undefined ? "" : cardHeight;
   ownershipPanel.classList.toggle(
     "ownership-panel-scrollable",
     ownershipPanel.scrollHeight > ownershipPanel.clientHeight + 1,
   );
+
+  /*
+   * Desktop importance-card pagination experiment, parked for now.
+   *
+   * const selectedDuo =
+   *   standingsData?.duoImportance?.find((duo) => duo.name === activeDuoImportanceName) ||
+   *   standingsData?.duoImportance?.[0];
+   * if (!isRenderingOwnership && selectedDuo) {
+   *   const measuredPageSize = measureImportancePageSize(selectedDuo.players.length);
+   *   if (measuredPageSize !== activeImportancePageSize) renderOwnership();
+   * }
+   */
 }
+
+/*
+ * Desktop importance-card pagination experiment, parked for now.
+ *
+function measureImportancePageSize(totalPlayers) {
+  if (!desktopLayout.matches || !ownershipPanel || !playerOwnership) return maxImportancePageSize;
+
+  const panelHeight =
+    ownershipPanel.getBoundingClientRect().height ||
+    Number.parseFloat(ownershipPanel.style.height) ||
+    Number.parseFloat(ownershipPanel.style.maxHeight);
+  if (!Number.isFinite(panelHeight) || panelHeight <= 0) return maxImportancePageSize;
+
+  const toolbar = ownershipPanel.querySelector(".ownership-toolbar");
+  const toolbarHeight = toolbar?.getBoundingClientRect().height || 0;
+  const listStyle = getComputedStyle(playerOwnership);
+  const listPadding =
+    (Number.parseFloat(listStyle.paddingTop) || 0) +
+    (Number.parseFloat(listStyle.paddingBottom) || 0);
+  const rowHeight =
+    playerOwnership.querySelector(".ownership-row")?.getBoundingClientRect().height ||
+    fallbackImportanceRowHeight;
+  const fitRows = (reservedHeight = 0) =>
+    Math.max(1, Math.floor((panelHeight - toolbarHeight - listPadding - reservedHeight) / rowHeight) - 1);
+
+  const pageWithoutPagination = Math.min(maxImportancePageSize, fitRows());
+  if (totalPlayers <= pageWithoutPagination) return pageWithoutPagination;
+
+  const paginationHeight = importancePagination?.getBoundingClientRect().height || 30;
+  return Math.min(maxImportancePageSize, fitRows(paginationHeight));
+}
+ */
 
 function createCell(value, className, label) {
   const element = document.createElement("td");
@@ -419,12 +529,6 @@ function formatPercent(value) {
 
 function formatTeamValue(value) {
   return Number.isFinite(value) ? `${value.toFixed(1)}m` : "—";
-}
-
-function formatTeamValueWithBank(value, bank) {
-  const teamValue = formatTeamValue(value);
-  if (!Number.isFinite(bank)) return teamValue;
-  return `${teamValue} (${formatTeamValue(bank)} bank)`;
 }
 
 function formatStatValue(value) {
@@ -639,10 +743,24 @@ function createTransferStat(detail) {
     "Transfers",
     formatTransfers(detail.transfersMade, detail.transferCost),
   );
-  const open = () => openTransferDialog(detail, stat);
+  return createHoverStat(stat, () => createTransferList(detail));
+}
+
+function createChipStat(detail) {
+  const stat = createTeamStat("Chip", formatChipName(detail.chip));
+  return createHoverStat(stat, () => createChipDetails(detail));
+}
+
+function createValueStat(detail) {
+  const stat = createTeamStat("Total Value", formatTeamValue(detail.teamValue));
+  return createHoverStat(stat, () => createValueDetails(detail));
+}
+
+function createHoverStat(stat, createContent) {
+  const open = () => openTransferDialog(createContent, stat);
   const close = () => scheduleCloseTransferDialog();
 
-  stat.classList.add("team-transfer-stat");
+  stat.classList.add("team-hover-stat");
   stat.tabIndex = 0;
   stat.setAttribute("aria-describedby", transferDialog.id);
   stat.addEventListener("mouseenter", open);
@@ -707,6 +825,24 @@ function createTransferList(detail) {
   return section;
 }
 
+function createChipDetails(detail) {
+  const section = document.createElement("section");
+  const item = document.createElement("p");
+  item.textContent = `Chips played: ${detail.chip || "-"}`;
+  section.append(item);
+  return section;
+}
+
+function createValueDetails(detail) {
+  const section = document.createElement("section");
+  const team = document.createElement("p");
+  const bank = document.createElement("p");
+  team.textContent = `Team: ${formatTeamValue(detail.teamValue)}`;
+  bank.textContent = `Bank: ${formatTeamValue(detail.bank)}`;
+  section.append(team, bank);
+  return section;
+}
+
 function positionTransferDialog(anchor) {
   if (transferDialog.hidden || !anchor) return;
 
@@ -730,10 +866,10 @@ function positionTransferDialog(anchor) {
   transferDialog.style.top = `${top}px`;
 }
 
-function openTransferDialog(detail, anchor) {
+function openTransferDialog(createContent, anchor) {
   clearTimeout(transferCloseTimer);
   activeTransferAnchor = anchor;
-  transferDialogBody.replaceChildren(createTransferList(detail));
+  transferDialogBody.replaceChildren(createContent());
   transferDialog.hidden = false;
   positionTransferDialog(anchor);
 }
@@ -778,10 +914,10 @@ function renderTeamDetail() {
 
   stats.className = "team-detail-stats";
   stats.append(
-    createTeamStat("Total Pts", detail.totalPoints),
+    createTeamStat("Total Points", detail.totalPoints),
     createTransferStat(detail),
-    createTeamStat("Chip", formatChipName(detail.chip)),
-    createTeamStat("Value", formatTeamValueWithBank(detail.teamValue, detail.bank)),
+    createChipStat(detail),
+    createValueStat(detail),
   );
 
   titleText.append(teamName, stats);
@@ -860,6 +996,17 @@ function renderOwnership() {
       Math.sign(a.importance) - Math.sign(b.importance) ||
       a.name.localeCompare(b.name),
   );
+  /*
+   * Desktop importance-card pagination experiment, parked for now.
+   *
+   * activeImportancePageSize = measureImportancePageSize(players.length);
+   * const pageCount = Math.max(1, Math.ceil(players.length / activeImportancePageSize));
+   * importancePage = Math.min(importancePage, pageCount - 1);
+   * const visiblePlayers = players.slice(
+   *   importancePage * activeImportancePageSize,
+   *   (importancePage + 1) * activeImportancePageSize,
+   * );
+   */
   const pageCount = mobileLayout.matches
     ? Math.max(1, Math.ceil(players.length / importancePageSize))
     : 1;
@@ -934,6 +1081,10 @@ async function loadStandings(force = false) {
 }
 
 refreshButton.addEventListener("click", () => loadStandings(true));
+themeToggle?.addEventListener("click", toggleTheme);
+preferredDarkTheme.addEventListener("change", () => {
+  if (!getStoredTheme()) applyTheme(getPreferredTheme());
+});
 pairsViewButton.addEventListener("click", () => {
   activeView = "pairs";
   renderActiveView();

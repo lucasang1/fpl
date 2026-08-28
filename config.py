@@ -5,6 +5,9 @@ LEAGUE_ID = int(os.getenv("FPL_LEAGUE_ID", "713788"))
 FPL_API_URL = "https://fantasy.premierleague.com/api"
 PUBLIC_DIR = Path(__file__).parent / "public"
 PORT = int(os.getenv("PORT", "8000"))
+TEAM_CARD_IMAGE = os.getenv("FPL_TEAM_CARD_IMAGE", "badge").strip().lower()
+if TEAM_CARD_IMAGE not in {"badge", "headshot"}:
+    TEAM_CARD_IMAGE = "badge"
 
 PAIRINGS = (
     ("Luc & Josh", (2020069, 3497860)),

@@ -8,7 +8,14 @@ from pathlib import Path
 from typing import Any
 from urllib.request import Request, urlopen
 
-from config import FPL_API_URL, HEADSHOTS, LEAGUE_ID, PAIRINGS, PUBLIC_DIR
+from config import (
+    FPL_API_URL,
+    HEADSHOTS,
+    LEAGUE_ID,
+    PAIRINGS,
+    PUBLIC_DIR,
+    TEAM_CARD_IMAGE,
+)
 
 JsonObject = dict[str, Any]
 JsonFetcher = Callable[[str], JsonObject]
@@ -787,6 +794,7 @@ def fetch_standings(
         "league": {"id": league["id"], "name": league["name"]},
         "gameweek": {"id": gameweek["id"], "name": gameweek["name"]},
         "updatedAt": datetime.now(timezone.utc).isoformat(),
+        "teamCardImage": TEAM_CARD_IMAGE,
         "standings": standings,
         "pairs": pairs,
         "duoImportance": duo_importance,

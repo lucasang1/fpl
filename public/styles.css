@@ -725,6 +725,7 @@ a:hover { color: var(--muted); }
 .team-detail {
   position: relative;
   overflow-x: hidden;
+  margin-bottom: 0;
   padding: 12px 0 0;
   border-radius: 12px;
   background: var(--surface);
@@ -762,6 +763,14 @@ a:hover { color: var(--muted); }
 .team-detail-title .team-badge {
   width: 42px;
   height: 42px;
+}
+
+.team-card-headshot {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 0;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .team-detail-title h2 {
@@ -971,12 +980,13 @@ a:hover { color: var(--muted); }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   padding: 12px;
+  font-size: .78rem;
 }
 
 .importance-dialog-body h4 {
   margin: 0 0 6px;
   color: var(--muted);
-  font-size: .82rem;
+  font-size: inherit;
   font-weight: 800;
   letter-spacing: .05em;
   text-transform: uppercase;
@@ -997,7 +1007,7 @@ a:hover { color: var(--muted); }
 .importance-dialog-body li,
 .importance-dialog-body p {
   color: var(--strong);
-  font-size: .82rem;
+  font-size: inherit;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
@@ -1017,7 +1027,7 @@ a:hover { color: var(--muted); }
   border-collapse: collapse;
   color: var(--strong);
   font-family: inherit;
-  font-size: .82rem;
+  font-size: inherit;
   line-height: 1.25;
 }
 
@@ -1209,9 +1219,7 @@ a:hover { color: var(--muted); }
     font-size: .62rem;
   }
 
-  .importance-dialog-body li,
-  .importance-dialog-body h4,
-  .importance-dialog-body p {
+  .importance-dialog-body {
     font-size: .62rem;
   }
 
@@ -1229,6 +1237,7 @@ a:hover { color: var(--muted); }
 
   .team-detail {
     margin-top: 12px;
+    margin-bottom: 0;
   }
 
   .team-detail-header {
@@ -1243,6 +1252,11 @@ a:hover { color: var(--muted); }
   }
 
   .team-detail-title .team-badge {
+    width: 28px;
+    height: 28px;
+  }
+
+  .team-card-headshot {
     width: 28px;
     height: 28px;
   }

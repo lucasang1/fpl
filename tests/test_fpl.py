@@ -640,6 +640,7 @@ class UpdateStandingsTests(unittest.TestCase):
             saved_output = json.loads(destination.read_text(encoding="utf-8"))
 
         self.assertEqual(len(requested_urls), 11)
+        self.assertEqual(output["teamCardImage"], "badge")
         self.assertEqual([team["rank"] for team in output["standings"]], [1, 2])
         self.assertEqual(
             [team["badgeUrl"] for team in output["standings"]],

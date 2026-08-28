@@ -8,7 +8,7 @@ Live standings for FPL league `713788`. Data is fetched when the page loads and 
 python3 run.py
 ```
 
-Configuration lives in `config.py`. Set `FPL_LEAGUE_ID` or `PORT` as environment variables to override the defaults.
+Configuration lives in `config.py`. Set `FPL_LEAGUE_ID` or `PORT` as environment variables to override the defaults. Set `FPL_TEAM_CARD_IMAGE=headshot` to use manager headshots in the team card; the default is `badge`.
 
 Run the tests with:
 

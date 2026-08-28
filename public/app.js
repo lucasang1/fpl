@@ -403,6 +403,19 @@ function createTeamBadge(team) {
   return createFallbackBadge(team.team);
 }
 
+function createTeamCardImage(team) {
+  if (standingsData?.teamCardImage === "headshot" && team.headshotUrl) {
+    const headshot = document.createElement("img");
+    headshot.src = team.headshotUrl;
+    headshot.alt = "";
+    headshot.className = "team-card-headshot";
+    headshot.loading = "lazy";
+    return headshot;
+  }
+
+  return createTeamBadge(team);
+}
+
 function createTeamLink(team) {
   const link = document.createElement("button");
 
@@ -549,10 +562,10 @@ function formatTeamPick(team) {
   return `${team.name}${team.captain ? " (C)" : ""}`;
 }
 
-function createTeamPickSection(title, teams) {
+function createTeamPickSection(title, teams, totalTeams = teams.length) {
   const section = document.createElement("section");
   const heading = document.createElement("h4");
-  heading.textContent = title;
+  heading.textContent = `${title} (${teams.length}/${totalTeams})`;
   section.append(heading);
 
   if (!teams.length) {
@@ -597,11 +610,14 @@ function positionImportanceDialog(anchor) {
 
 function openImportanceDialog(player, anchor) {
   const teams = player.teams || {};
+  const startedTeams = teams.started || [];
+  const benchedTeams = teams.benched || [];
+  const totalTeams = startedTeams.length + benchedTeams.length;
   activeImportanceAnchor = anchor;
   importanceDialogTitle.textContent = player.name;
   importanceDialogBody.replaceChildren(
-    createTeamPickSection("Started", teams.started || []),
-    createTeamPickSection("Benched", teams.benched || []),
+    createTeamPickSection("Started", startedTeams, totalTeams),
+    createTeamPickSection("Benched", benchedTeams, totalTeams),
     createPointDetails(player.pointDetails),
   );
 
@@ -921,7 +937,7 @@ function renderTeamDetail() {
   );
 
   titleText.append(teamName, stats);
-  titleGroup.append(createTeamBadge(standingsTeam), titleText);
+  titleGroup.append(createTeamCardImage(standingsTeam), titleText);
 
   header.append(titleGroup, gameweekScore);
 

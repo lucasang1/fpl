@@ -24,7 +24,7 @@
     <script src="app.js" defer></script>
   </head>
   <body>
-    <main>
+    <main class="team-detail-active">
       <header class="top-bar">
         <div class="title-group">
           <p class="eyebrow">Fantasy Premier League</p>
@@ -65,7 +65,28 @@
         </table>
       </div>
 
-      <section id="team-detail" class="team-detail" hidden></section>
+      <section id="team-detail" class="team-detail team-detail-loading" aria-busy="true">
+        <div class="team-detail-header" aria-hidden="true">
+          <div class="team-detail-title">
+            <span class="team-detail-placeholder team-detail-placeholder-badge"></span>
+            <div class="team-detail-title-text">
+              <span class="team-detail-placeholder team-detail-placeholder-title"></span>
+              <div class="team-detail-stats">
+                <span class="team-detail-placeholder team-detail-placeholder-stat"></span>
+                <span class="team-detail-placeholder team-detail-placeholder-stat"></span>
+                <span class="team-detail-placeholder team-detail-placeholder-stat"></span>
+              </div>
+            </div>
+          </div>
+          <span class="team-detail-placeholder team-detail-placeholder-score"></span>
+        </div>
+        <div class="ownership-list team-player-list" aria-hidden="true">
+          <span class="team-detail-placeholder team-detail-placeholder-row"></span>
+          <span class="team-detail-placeholder team-detail-placeholder-row"></span>
+          <span class="team-detail-placeholder team-detail-placeholder-row"></span>
+          <span class="team-detail-placeholder team-detail-placeholder-row"></span>
+        </div>
+      </section>
 
       <div class="ownership-panel">
         <div class="ownership-toolbar">

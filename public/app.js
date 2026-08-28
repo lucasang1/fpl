@@ -1048,6 +1048,9 @@ function closeTransferDialog() {
 function renderTeamDetail() {
   if (!teamDetail || activeTeamId === undefined) return;
 
+  teamDetail.classList.remove("team-detail-loading");
+  teamDetail.removeAttribute("aria-busy");
+
   const detail = findTeamDetail(activeTeamId);
   const standingsTeam = findStandingsTeam(activeTeamId);
   if (!detail || !standingsTeam) {
@@ -1234,6 +1237,11 @@ async function loadStandings(force = false) {
     renderStandings(data);
   } catch (error) {
     status.textContent = error instanceof Error ? error.message : "Standings are unavailable";
+    if (teamDetail) {
+      teamDetail.hidden = true;
+      teamDetail.classList.remove("team-detail-loading");
+      teamDetail.removeAttribute("aria-busy");
+    }
   } finally {
     refreshButton.disabled = false;
     refreshButton.setAttribute("aria-label", "Refresh standings");

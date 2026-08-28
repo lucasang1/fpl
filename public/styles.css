@@ -1309,8 +1309,8 @@ a:hover { color: var(--muted); }
     background: var(--table-row-hover-bg);
   }
 
-  th:nth-child(1) { width: 2px; }
-  th:nth-child(2) { width: 39%; }
+  th:nth-child(1) { width: 34px; }
+  th:nth-child(2) { width: 35%; }
   th:nth-child(3) { width: 80px; }
   th:nth-child(4),
   th:nth-child(5) { width: 38px; }

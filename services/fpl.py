@@ -390,12 +390,11 @@ def _format_player_ownership(
 
 def _format_duo_importance(
     pairs: Iterable[JsonObject],
-    gameweek_id: int,
     elements: Iterable[JsonObject],
     teams: Iterable[JsonObject],
     fixtures: Iterable[JsonObject],
     live_elements: Iterable[JsonObject],
-    fetch_json: JsonFetcher,
+    entry_event_data: dict[int, JsonObject],
 ) -> list[JsonObject]:
     pairs = list(pairs)
     if not pairs:
@@ -405,18 +404,8 @@ def _format_duo_importance(
         elements, teams, fixtures, live_elements
     )
 
-    pick_cache: dict[int, list[JsonObject]] = {}
-
     def picks_for_entry(entry_id: int) -> list[JsonObject]:
-        if entry_id not in pick_cache:
-            try:
-                data = fetch_json(
-                    f"{FPL_API_URL}/entry/{entry_id}/event/{gameweek_id}/picks/"
-                )
-            except Exception:
-                data = {"picks": []}
-            pick_cache[entry_id] = data.get("picks", [])
-        return pick_cache[entry_id]
+        return entry_event_data.get(entry_id, {}).get("picks", [])
 
     player_team_breakdown: dict[int, JsonObject] = defaultdict(
         lambda: {"started": [], "benched": []}
@@ -777,12 +766,11 @@ def fetch_standings(
     live = fetch_json(f"{FPL_API_URL}/event/{gameweek['id']}/live/") if standings else {}
     duo_importance = _format_duo_importance(
         pairs,
-        gameweek["id"],
         bootstrap["elements"],
         bootstrap.get("teams", []),
         fixtures,
         live.get("elements", []),
-        fetch_json,
+        entry_event_data,
     )
     team_details = _format_team_details(
         standings,

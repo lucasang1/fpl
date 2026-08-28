@@ -333,12 +333,13 @@ class FormatDuoImportanceTests(unittest.TestCase):
             6: [],
         }
 
-        def fetch_json(url):
-            entry_id = int(url.split("/entry/", 1)[1].split("/", 1)[0])
-            return {"picks": picks_by_entry[entry_id]}
+        entry_event_data = {
+            entry_id: {"picks": picks}
+            for entry_id, picks in picks_by_entry.items()
+        }
 
         importance = _format_duo_importance(
-            pairs, 4, elements, teams, fixtures, live_elements, fetch_json
+            pairs, elements, teams, fixtures, live_elements, entry_event_data
         )
 
         alpha = importance[0]["players"]
@@ -640,18 +641,27 @@ class UpdateStandingsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             destination = Path(temporary_directory) / "standings.json"
             output = update_standings(
-                fetch_json=fetch_json, destination=destination, pairings=()
+                fetch_json=fetch_json,
+                destination=destination,
+                pairings=(("Test pair", (10, 20)),),
             )
             saved_output = json.loads(destination.read_text(encoding="utf-8"))
 
         self.assertEqual(len(requested_urls), 11)
+        self.assertEqual(
+            len([url for url in requested_urls if url.endswith("/picks/")]),
+            2,
+        )
         self.assertEqual(output["teamCardImage"], "badge")
         self.assertEqual([team["rank"] for team in output["standings"]], [1, 2])
         self.assertEqual(
             [team["badgeUrl"] for team in output["standings"]],
             ["https://example.com/10.png", "https://example.com/20.png"],
         )
-        self.assertEqual(output["duoImportance"], [])
+        self.assertEqual(
+            [pair["name"] for pair in output["duoImportance"]],
+            ["Test pair"],
+        )
         self.assertEqual([team["team"] for team in output["teamDetails"]], ["Team 1", "Team 2"])
         self.assertEqual(saved_output, output)
 

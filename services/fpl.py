@@ -258,10 +258,13 @@ def _build_player_context(
     fixtures: Iterable[JsonObject],
     live_elements: Iterable[JsonObject],
 ) -> tuple[dict[int, JsonObject], Callable[[int], tuple[str, str, int | str]]]:
+    teams = list(teams)
+    team_codes = {team["id"]: team.get("code") for team in teams}
     players = {
         element["id"]: {
             "name": _player_name(element),
             "team": element.get("team"),
+            "teamCode": element.get("team_code") or team_codes.get(element.get("team")),
             "position": element.get("element_type"),
         }
         for element in elements
@@ -471,6 +474,7 @@ def _format_duo_importance(
                 {
                     "id": player_id,
                     "name": players.get(player_id, {}).get("name", f"Player {player_id}"),
+                    "teamCode": players.get(player_id, {}).get("teamCode"),
                     "opponent": opponent,
                     "fixtureTime": fixture_time,
                     "points": points,
@@ -610,6 +614,7 @@ def _format_team_details(
                 {
                     "id": player_id,
                     "name": player.get("name", f"Player {player_id}"),
+                    "teamCode": player.get("teamCode"),
                     "opponent": opponent,
                     "fixtureTime": fixture_time,
                     "points": points,

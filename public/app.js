@@ -44,6 +44,7 @@ let headerScaleFrame;
 let transferCloseTimer;
 const desktopLayout = window.matchMedia("(min-width: 901px)");
 const mobileLayout = window.matchMedia("(max-width: 700px)");
+const hoverLayout = window.matchMedia("(hover: hover) and (pointer: fine)");
 const preferredDarkTheme = window.matchMedia("(prefers-color-scheme: dark)");
 const lastViewedTeamKey = "fpl:lastViewedTeamId";
 const themeStorageKey = "fpl:theme";
@@ -669,6 +670,32 @@ function closeImportanceDialog() {
   activeImportanceAnchor = undefined;
 }
 
+function playerCrestUrl(player) {
+  if (!player.teamCode) return "";
+  return `https://resources.premierleague.com/premierleague/badges/t${player.teamCode}.png`;
+}
+
+function createPlayerNameContent(player, label) {
+  const fragment = document.createDocumentFragment();
+  const crestUrl = playerCrestUrl(player);
+
+  if (crestUrl) {
+    const crest = document.createElement("img");
+    crest.className = "player-crest";
+    crest.src = crestUrl;
+    crest.alt = "";
+    crest.loading = "lazy";
+    crest.decoding = "async";
+    fragment.append(crest);
+  }
+
+  const text = document.createElement("span");
+  text.className = "player-name-text";
+  text.textContent = label;
+  fragment.append(text);
+  return fragment;
+}
+
 function createImportanceRow(player) {
   const row = document.createElement("div");
   const name = document.createElement("button");
@@ -680,7 +707,7 @@ function createImportanceRow(player) {
   row.className = "ownership-row";
   name.className = "importance-player-button";
   name.type = "button";
-  name.textContent = player.name;
+  name.replaceChildren(createPlayerNameContent(player, player.name));
   opponent.textContent = player.opponent;
   fixtureTime.textContent = player.fixtureTime || "-";
   points.textContent = player.points;
@@ -726,7 +753,7 @@ function createTeamPlayerRow(player) {
   if (player.isBenched) row.classList.add("team-player-row-benched");
   name.className = "importance-player-button team-player-name";
   name.type = "button";
-  name.textContent = playerDisplayName(player);
+  name.replaceChildren(createPlayerNameContent(player, playerDisplayName(player)));
   opponent.textContent = player.opponent;
   fixtureTime.textContent = player.fixtureTime || "-";
   points.textContent = player.points;
@@ -775,14 +802,20 @@ function createValueStat(detail) {
 function createHoverStat(stat, createContent) {
   const open = () => openTransferDialog(createContent, stat);
   const close = () => scheduleCloseTransferDialog();
+  const openOnHover = () => {
+    if (hoverLayout.matches) open();
+  };
+  const closeOnHover = () => {
+    if (hoverLayout.matches) close();
+  };
 
   stat.classList.add("team-hover-stat");
   stat.tabIndex = 0;
   stat.setAttribute("aria-describedby", transferDialog.id);
-  stat.addEventListener("mouseenter", open);
-  stat.addEventListener("focus", open);
-  stat.addEventListener("mouseleave", close);
-  stat.addEventListener("blur", close);
+  stat.addEventListener("mouseenter", openOnHover);
+  stat.addEventListener("focus", openOnHover);
+  stat.addEventListener("mouseleave", closeOnHover);
+  stat.addEventListener("blur", closeOnHover);
   stat.addEventListener("click", () => {
     if (activeTransferAnchor === stat && !transferDialog.hidden) {
       closeTransferDialog();

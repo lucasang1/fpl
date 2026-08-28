@@ -350,11 +350,13 @@ button:disabled { cursor: wait; opacity: .65; }
   height: 38px;
   padding: 0;
   border-radius: 50%;
+  overflow: visible;
 }
 
 .refresh-icon {
   width: 1.1rem;
   height: 1.1rem;
+  overflow: visible;
   fill: none;
   stroke: currentColor;
   stroke-width: 2.4;
@@ -617,6 +619,9 @@ a:hover { color: var(--muted); }
 }
 
 .importance-player-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
   overflow: hidden;
   border: 0;
@@ -627,6 +632,20 @@ a:hover { color: var(--muted); }
   font: inherit;
   font-weight: 750;
   text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-crest {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.player-name-text {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1238,12 +1257,13 @@ a:hover { color: var(--muted); }
   .team-detail {
     margin-top: 12px;
     margin-bottom: 0;
+    padding-top: 0;
   }
 
   .team-detail-header {
     grid-template-columns: 28px minmax(0, 1fr) 28px;
     gap: 8px;
-    padding: 0 2px 5px;
+    padding: 5px 2px 5px;
   }
 
   .team-detail-title {

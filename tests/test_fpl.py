@@ -299,10 +299,10 @@ class FormatDuoImportanceTests(unittest.TestCase):
             {"id": 30, "web_name": "Verbruggen", "team": 10},
         ]
         teams = [
-            {"id": 10, "short_name": "BHA"},
-            {"id": 20, "short_name": "LIV"},
-            {"id": 30, "short_name": "AVL"},
-            {"id": 40, "short_name": "MUN"},
+            {"id": 10, "short_name": "BHA", "code": 36},
+            {"id": 20, "short_name": "LIV", "code": 14},
+            {"id": 30, "short_name": "AVL", "code": 7},
+            {"id": 40, "short_name": "MUN", "code": 1},
         ]
         fixtures = [
             {
@@ -343,6 +343,7 @@ class FormatDuoImportanceTests(unittest.TestCase):
 
         alpha = importance[0]["players"]
         self.assertEqual(alpha[0]["name"], "Salah")
+        self.assertEqual(alpha[0]["teamCode"], 14)
         self.assertEqual(alpha[0]["opponent"], "MUN (H)")
         self.assertEqual(alpha[0]["fixtureTime"], "Tue 03:00")
         self.assertEqual(alpha[0]["points"], "-")
@@ -481,7 +482,10 @@ class FormatTeamDetailsTests(unittest.TestCase):
             {"id": 40, "web_name": "Watkins", "team": 2, "element_type": 4},
             {"id": 41, "web_name": "Haaland", "team": 2, "element_type": 4},
         ]
-        teams = [{"id": 1, "short_name": "ARS"}, {"id": 2, "short_name": "BRE"}]
+        teams = [
+            {"id": 1, "short_name": "ARS", "code": 3},
+            {"id": 2, "short_name": "BRE", "code": 94},
+        ]
         fixtures = [
             {
                 "team_h": 1,
@@ -554,6 +558,7 @@ class FormatTeamDetailsTests(unittest.TestCase):
             ],
         )
         self.assertTrue(details[0]["players"][4]["isBenched"])
+        self.assertEqual(details[0]["players"][0]["teamCode"], 3)
         self.assertTrue(details[0]["players"][1]["isCaptain"])
         self.assertEqual(details[0]["players"][1]["importance"], 100.0)
         self.assertEqual(

@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 
 from config import (
     FPL_API_URL,
+    GAMEWEEK_SNAPSHOT_DIR,
     HEADSHOTS,
     LEAGUE_ID,
     PAIRINGS,
@@ -20,6 +21,10 @@ from config import (
 JsonObject = dict[str, Any]
 JsonFetcher = Callable[[str], JsonObject]
 FIXTURE_TIMEZONE = timezone(timedelta(hours=8))
+LIVE_POLL_MS = 20_000
+SETTLING_POLL_MS = 120_000
+SETTLING_WINDOW = timedelta(minutes=60)
+MATCH_END_BUFFER = timedelta(minutes=20)
 try:
     import certifi
 except ImportError:  # pragma: no cover - depends on deployment environment
@@ -66,16 +71,91 @@ def _get_json(url: str) -> JsonObject:
         return json.load(response)
 
 
+def _parse_fpl_time(value: str | None) -> datetime | None:
+    if not value:
+        return None
+
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 def _format_fixture_time(kickoff_time: str | None) -> str:
-    if not kickoff_time:
+    kickoff = _parse_fpl_time(kickoff_time)
+    if kickoff is None:
         return "-"
 
-    kickoff = datetime.fromisoformat(kickoff_time.replace("Z", "+00:00"))
     return kickoff.astimezone(FIXTURE_TIMEZONE).strftime("%a %H:%M")
 
 
-def _select_gameweek(events: Iterable[JsonObject]) -> JsonObject:
+def _fixture_finished(fixture: JsonObject) -> bool:
+    return bool(fixture.get("finished") or fixture.get("finished_provisional"))
+
+
+def _fixture_started(fixture: JsonObject) -> bool:
+    return bool(fixture.get("started") or _fixture_finished(fixture))
+
+
+def _estimated_fixture_end(fixture: JsonObject) -> datetime | None:
+    if not _fixture_finished(fixture):
+        return None
+
+    kickoff = _parse_fpl_time(fixture.get("kickoff_time"))
+    if kickoff is None:
+        return None
+
+    match_minutes = max(_stat_number(fixture.get("minutes")), 90)
+    return kickoff + timedelta(minutes=match_minutes) + MATCH_END_BUFFER
+
+
+def _refresh_policy(
+    fixtures: Iterable[JsonObject], now: datetime | None = None
+) -> JsonObject:
+    fixtures = list(fixtures)
+    now = now or datetime.now(timezone.utc)
+
+    if any(
+        _fixture_started(fixture) and not _fixture_finished(fixture)
+        for fixture in fixtures
+    ):
+        return {
+            "mode": "live",
+            "pollMs": LIVE_POLL_MS,
+            "reason": "match in play",
+        }
+
+    finished_at = [
+        estimated_end
+        for fixture in fixtures
+        if (estimated_end := _estimated_fixture_end(fixture)) is not None
+    ]
+    last_finished_at = max(finished_at, default=None)
+    if last_finished_at is not None and now - last_finished_at <= SETTLING_WINDOW:
+        return {
+            "mode": "settling",
+            "pollMs": SETTLING_POLL_MS,
+            "reason": "recently finished match",
+            "lastMatchEndedAt": last_finished_at.isoformat(),
+        }
+
+    policy: JsonObject = {
+        "mode": "frozen",
+        "pollMs": None,
+        "reason": "no recent live matches",
+    }
+    if last_finished_at is not None:
+        policy["lastMatchEndedAt"] = last_finished_at.isoformat()
+    return policy
+
+
+def _select_gameweek(
+    events: Iterable[JsonObject], gameweek_id: int | None = None
+) -> JsonObject:
     events = list(events)
+    if gameweek_id is not None:
+        gameweek = next((event for event in events if event["id"] == gameweek_id), None)
+        if gameweek is None:
+            raise RuntimeError(f"Gameweek {gameweek_id} was not found")
+        return gameweek
+
     gameweek = next((event for event in events if event["is_current"]), None)
     gameweek = gameweek or next(
         (event for event in reversed(events) if event["finished"]), None
@@ -85,6 +165,16 @@ def _select_gameweek(events: Iterable[JsonObject]) -> JsonObject:
     if gameweek is None:
         raise RuntimeError("No FPL gameweek found")
     return gameweek
+
+
+def _available_gameweeks(
+    events: Iterable[JsonObject], current_gameweek_id: int
+) -> list[JsonObject]:
+    return [
+        {"id": event["id"], "name": event["name"]}
+        for event in sorted(events, key=lambda event: event["id"], reverse=True)
+        if event["id"] <= current_gameweek_id
+    ]
 
 
 def _fetch_league(fetch_json: JsonFetcher) -> tuple[JsonObject, list[JsonObject]]:
@@ -252,12 +342,65 @@ def _format_point_details(
     }
 
 
+def _stat_number(value: Any) -> int:
+    return (
+        int(value)
+        if isinstance(value, int | float) and not isinstance(value, bool)
+        else 0
+    )
+
+
+def _fixture_player_stat(
+    live_element: JsonObject, fixture_id: int | None, identifier: str
+) -> int | None:
+    if fixture_id is None:
+        return None
+
+    explanations = live_element.get("explain", [])
+    for fixture in explanations:
+        if fixture.get("fixture") != fixture_id:
+            continue
+        for item in fixture.get("stats", []):
+            if item.get("identifier") == identifier:
+                return _stat_number(item.get("value"))
+        return 0
+
+    return 0 if explanations else None
+
+
+def _live_match_status(
+    live_element: JsonObject, fixture: JsonObject | None
+) -> str | None:
+    if not fixture:
+        return None
+
+    stats = live_element.get("stats", {})
+    fixture_id = fixture.get("id")
+    fixture_minutes = _stat_number(fixture.get("minutes"))
+    player_minutes = _fixture_player_stat(live_element, fixture_id, "minutes")
+    player_starts = _fixture_player_stat(live_element, fixture_id, "starts")
+    player_minutes = (
+        _stat_number(stats.get("minutes")) if player_minutes is None else player_minutes
+    )
+    player_started = (
+        _stat_number(stats.get("starts")) if player_starts is None else player_starts
+    ) > 0
+
+    if player_started and player_minutes >= fixture_minutes:
+        return "In Play"
+    if player_minutes == 0:
+        return "Not In Play"
+    if player_minutes < fixture_minutes:
+        return "Subbed Off"
+    return "In Play" if player_started else "Subbed On"
+
+
 def _build_player_context(
     elements: Iterable[JsonObject],
     teams: Iterable[JsonObject],
     fixtures: Iterable[JsonObject],
     live_elements: Iterable[JsonObject],
-) -> tuple[dict[int, JsonObject], Callable[[int], tuple[str, str, int | str]]]:
+) -> tuple[dict[int, JsonObject], Callable[[int], JsonObject]]:
     teams = list(teams)
     team_codes = {team["id"]: team.get("code") for team in teams}
     players = {
@@ -284,36 +427,52 @@ def _build_player_context(
     for fixture in fixtures:
         home_id = fixture["team_h"]
         away_id = fixture["team_a"]
-        finished = bool(fixture.get("finished") or fixture.get("finished_provisional"))
-        started = bool(fixture.get("started") or finished)
+        finished = _fixture_finished(fixture)
+        started = _fixture_started(fixture)
+        live = started and not finished
         fixtures_by_team[home_id].append(
             {
+                "id": fixture.get("id"),
                 "opponent": team_names.get(away_id, str(away_id)),
                 "venue": "H",
                 "started": started,
                 "finished": finished,
+                "live": live,
+                "minutes": fixture.get("minutes"),
                 "time": _format_fixture_time(fixture.get("kickoff_time")),
             }
         )
         fixtures_by_team[away_id].append(
             {
+                "id": fixture.get("id"),
                 "opponent": team_names.get(home_id, str(home_id)),
                 "venue": "A",
                 "started": started,
                 "finished": finished,
+                "live": live,
+                "minutes": fixture.get("minutes"),
                 "time": _format_fixture_time(fixture.get("kickoff_time")),
             }
         )
 
-    def player_context(player_id: int) -> tuple[str, str, int | str]:
+    def player_context(player_id: int) -> JsonObject:
         player = players.get(player_id, {})
         player_fixtures = fixtures_by_team.get(player.get("team"), [])
         if not player_fixtures:
-            return "-", "-", "-"
+            return {
+                "opponent": "-",
+                "fixtureTime": "-",
+                "points": "-",
+                "matchStatus": None,
+                "isLive": False,
+            }
 
         opponent = ", ".join(
             f'{fixture["opponent"]} ({fixture["venue"]})'
             for fixture in player_fixtures
+        )
+        live_fixture = next(
+            (fixture for fixture in player_fixtures if fixture["live"]), None
         )
         fixture_time = (
             "Done"
@@ -323,7 +482,15 @@ def _build_player_context(
         points = live_points.get(player_id, 0) if any(
             fixture["started"] for fixture in player_fixtures
         ) else "-"
-        return opponent, fixture_time, points
+        return {
+            "opponent": opponent,
+            "fixtureTime": fixture_time,
+            "points": points,
+            "matchStatus": _live_match_status(
+                live_by_player.get(player_id, {}), live_fixture
+            ),
+            "isLive": live_fixture is not None,
+        }
 
     return players, player_context
 
@@ -458,15 +625,17 @@ def _format_duo_importance(
                 if comparison
                 else 0
             )
-            opponent, fixture_time, points = player_context(player_id)
+            context = player_context(player_id)
             rows.append(
                 {
                     "id": player_id,
                     "name": players.get(player_id, {}).get("name", f"Player {player_id}"),
                     "teamCode": players.get(player_id, {}).get("teamCode"),
-                    "opponent": opponent,
-                    "fixtureTime": fixture_time,
-                    "points": points,
+                    "opponent": context["opponent"],
+                    "fixtureTime": context["fixtureTime"],
+                    "points": context["points"],
+                    "matchStatus": context["matchStatus"],
+                    "isLive": context["isLive"],
                     "pointDetails": players.get(player_id, {}).get("pointDetails"),
                     "importance": round(selected_exposure - average_exposure, 1),
                     "teams": player_team_breakdown.get(
@@ -597,16 +766,18 @@ def _format_team_details(
                 if comparison
                 else 0
             )
-            opponent, fixture_time, points = player_context(player_id)
+            context = player_context(player_id)
             multiplier = pick.get("multiplier", 0)
             picks.append(
                 {
                     "id": player_id,
                     "name": player.get("name", f"Player {player_id}"),
                     "teamCode": player.get("teamCode"),
-                    "opponent": opponent,
-                    "fixtureTime": fixture_time,
-                    "points": points,
+                    "opponent": context["opponent"],
+                    "fixtureTime": context["fixtureTime"],
+                    "points": context["points"],
+                    "matchStatus": context["matchStatus"],
+                    "isLive": context["isLive"],
                     "pointDetails": player.get("pointDetails"),
                     "importance": round(selected_exposure - average_exposure, 1),
                     "position": player.get("position"),
@@ -651,17 +822,74 @@ def _format_team_details(
     return team_details
 
 
+def _apply_gameweek_status_counts(
+    standings: Iterable[JsonObject],
+    entry_event_data: dict[int, JsonObject],
+    elements: Iterable[JsonObject],
+    fixtures: Iterable[JsonObject],
+) -> None:
+    team_by_player = {element["id"]: element.get("team") for element in elements}
+    fixtures_by_team: dict[int, list[JsonObject]] = defaultdict(list)
+    for fixture in fixtures:
+        fixtures_by_team[fixture["team_h"]].append(fixture)
+        fixtures_by_team[fixture["team_a"]].append(fixture)
+
+    def player_counts(player_id: int) -> tuple[int, int]:
+        player_fixtures = fixtures_by_team.get(team_by_player.get(player_id), [])
+        if not player_fixtures:
+            return 0, 0
+
+        has_started = any(_fixture_started(fixture) for fixture in player_fixtures)
+        has_unfinished = any(
+            not _fixture_finished(fixture) for fixture in player_fixtures
+        )
+        return int(has_started and has_unfinished), int(not has_started)
+
+    counts_by_entry: dict[int, JsonObject] = {}
+    for entry_id, event_data in entry_event_data.items():
+        in_play = 0
+        to_start = 0
+        for pick in event_data.get("picks", []):
+            if pick.get("multiplier", 0) <= 0:
+                continue
+
+            player_in_play, player_to_start = player_counts(pick["element"])
+            in_play += player_in_play
+            to_start += player_to_start
+
+        counts_by_entry[entry_id] = {"inPlay": in_play, "toStart": to_start}
+
+    for team in standings:
+        counts = counts_by_entry.get(team["id"], {"inPlay": 0, "toStart": 0})
+        team["inPlay"] = counts["inPlay"]
+        team["toStart"] = counts["toStart"]
+
+
 def _format_standings(
     entries: Iterable[JsonObject],
     gameweek_id: int,
     badges: dict[int, str] | None = None,
     chips: dict[int, str] | None = None,
+    entry_event_data: dict[int, JsonObject] | None = None,
 ) -> list[JsonObject]:
     badges = badges or {}
     chips = chips or {}
+    entry_event_data = entry_event_data or {}
+    should_rank_by_event = any(
+        "total_points" in data.get("entry_history", {})
+        for data in entry_event_data.values()
+    )
     standings = []
     for entry in entries:
         is_ranked = "rank" in entry
+        entry_id = entry["entry"]
+        entry_history = entry_event_data.get(entry_id, {}).get("entry_history", {})
+        gameweek_points = entry_history.get(
+            "points", entry["event_total"] if is_ranked else "—"
+        )
+        total_points = entry_history.get(
+            "total_points", entry["total"] if is_ranked else "—"
+        )
         manager = (
             entry["player_name"]
             if is_ranked
@@ -673,14 +901,34 @@ def _format_standings(
                 "rank": entry["rank"] if is_ranked else "—",
                 "team": entry["entry_name"],
                 "manager": manager,
-                "gameweekPoints": entry["event_total"] if is_ranked else "—",
-                "totalPoints": entry["total"] if is_ranked else "—",
+                "gameweekPoints": gameweek_points,
+                "totalPoints": total_points,
                 "url": _team_url(entry["entry"], gameweek_id),
                 "badgeUrl": badges.get(entry["entry"]),
                 "headshotUrl": HEADSHOTS.get(entry["entry"]),
                 "chip": chips.get(entry["entry"]),
             }
         )
+    if should_rank_by_event:
+        standings.sort(
+            key=lambda team: (
+                not isinstance(team["totalPoints"], int | float),
+                -team["totalPoints"] if isinstance(team["totalPoints"], int | float) else 0,
+                team["team"].casefold(),
+            )
+        )
+        previous_total: int | float | None = None
+        previous_rank: int | None = None
+        for position, team in enumerate(standings, start=1):
+            total = team["totalPoints"]
+            if not isinstance(total, int | float):
+                team["rank"] = "—"
+            elif total == previous_total:
+                team["rank"] = previous_rank
+            else:
+                team["rank"] = position
+                previous_total = total
+                previous_rank = position
     return standings
 
 
@@ -702,12 +950,17 @@ def _format_pairs(
             values = [member[field] for member in members]
             return sum(values) if all(isinstance(value, int) for value in values) else "—"
 
+        def combined_count(field: str) -> int:
+            return sum(member.get(field, 0) for member in members)
+
         pairs.append(
             {
                 "name": name,
                 "members": members,
                 "gameweekPoints": combined("gameweekPoints"),
                 "totalPoints": combined("totalPoints"),
+                "inPlay": combined_count("inPlay"),
+                "toStart": combined_count("toStart"),
             }
         )
 
@@ -736,34 +989,127 @@ def _format_pairs(
 
 
 def _write_json(data: JsonObject, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
         json.dumps(data, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
 
 
+def _gameweek_snapshot_path(snapshot_dir: Path, gameweek_id: int) -> Path:
+    return snapshot_dir / f"gw-{gameweek_id}.json"
+
+
+def _read_gameweek_snapshot(snapshot_dir: Path, gameweek_id: int) -> JsonObject | None:
+    try:
+        data = json.loads(
+            _gameweek_snapshot_path(snapshot_dir, gameweek_id).read_text(
+                encoding="utf-8"
+            )
+        )
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    if data.get("gameweek", {}).get("id") != gameweek_id:
+        return None
+    return data
+
+
+def _with_current_gameweek_metadata(
+    data: JsonObject, current_gameweek: JsonObject, available_gameweeks: list[JsonObject]
+) -> JsonObject:
+    return {
+        **data,
+        "currentGameweek": {
+            "id": current_gameweek["id"],
+            "name": current_gameweek["name"],
+        },
+        "availableGameweeks": available_gameweeks,
+    }
+
+
+def _gameweek_is_locked(gameweek: JsonObject, current_gameweek: JsonObject) -> bool:
+    return bool(gameweek.get("finished") or gameweek["id"] < current_gameweek["id"])
+
+
+def _gameweek_fixtures_finished(fixtures: Iterable[JsonObject]) -> bool:
+    fixtures = list(fixtures)
+    return bool(fixtures) and all(_fixture_finished(fixture) for fixture in fixtures)
+
+
+def _snapshot_finished_gameweek(
+    data: JsonObject, fixtures: Iterable[JsonObject], snapshot_dir: Path | None
+) -> None:
+    if snapshot_dir is None:
+        return
+
+    if not _gameweek_fixtures_finished(fixtures):
+        return
+
+    gameweek_id = data.get("gameweek", {}).get("id")
+    if not isinstance(gameweek_id, int):
+        return
+
+    try:
+        _write_json(data, _gameweek_snapshot_path(snapshot_dir, gameweek_id))
+    except OSError:
+        pass
+
+
 def fetch_standings(
     *,
     fetch_json: JsonFetcher | None = None,
     pairings: Iterable[tuple[str, tuple[int, int]]] = PAIRINGS,
+    gameweek_id: int | None = None,
+    snapshot_dir: Path | None = None,
+    read_snapshot: bool = True,
 ) -> JsonObject:
+    should_use_default_snapshot_dir = fetch_json is None and snapshot_dir is None
     fetch_json = fetch_json or _get_json
+    if should_use_default_snapshot_dir:
+        snapshot_dir = GAMEWEEK_SNAPSHOT_DIR
 
     bootstrap = fetch_json(f"{FPL_API_URL}/bootstrap-static/")
-    gameweek = _select_gameweek(bootstrap["events"])
+    current_gameweek = _select_gameweek(bootstrap["events"])
+    gameweek = _select_gameweek(bootstrap["events"], gameweek_id)
+    if gameweek["id"] > current_gameweek["id"]:
+        raise RuntimeError(f"Gameweek {gameweek['id']} is not available yet")
+    available_gameweeks = _available_gameweeks(
+        bootstrap["events"], current_gameweek["id"]
+    )
+    if (
+        read_snapshot
+        and snapshot_dir is not None
+        and _gameweek_is_locked(gameweek, current_gameweek)
+    ):
+        snapshot = _read_gameweek_snapshot(snapshot_dir, gameweek["id"])
+        if snapshot is not None:
+            return _with_current_gameweek_metadata(
+                snapshot, current_gameweek, available_gameweeks
+            )
+
     league, entries = _fetch_league(fetch_json)
     badges = _fetch_badges(entries, fetch_json)
     entry_event_data = _fetch_entry_event_data(entries, gameweek["id"], fetch_json)
     transfer_data = _fetch_transfer_data(entries, fetch_json)
     chips = _format_chips(entry_event_data)
-    standings = _format_standings(entries, gameweek["id"], badges, chips)
-    pairs = _format_pairs(standings, pairings)
+    standings = _format_standings(
+        entries, gameweek["id"], badges, chips, entry_event_data
+    )
     fixtures = (
         fetch_json(f"{FPL_API_URL}/fixtures/?event={gameweek['id']}")
         if standings
         else []
     )
     live = fetch_json(f"{FPL_API_URL}/event/{gameweek['id']}/live/") if standings else {}
+    refresh_policy = _refresh_policy(fixtures)
+    _apply_gameweek_status_counts(
+        standings,
+        entry_event_data,
+        bootstrap["elements"],
+        fixtures,
+    )
+    pairs = _format_pairs(standings, pairings)
     duo_importance = _format_duo_importance(
         pairs,
         bootstrap["elements"],
@@ -783,16 +1129,24 @@ def fetch_standings(
         live.get("elements", []),
     )
 
-    return {
+    output = {
         "league": {"id": league["id"], "name": league["name"]},
         "gameweek": {"id": gameweek["id"], "name": gameweek["name"]},
+        "currentGameweek": {
+            "id": current_gameweek["id"],
+            "name": current_gameweek["name"],
+        },
+        "availableGameweeks": available_gameweeks,
         "updatedAt": datetime.now(timezone.utc).isoformat(),
         "teamCardImage": TEAM_CARD_IMAGE,
+        "refreshPolicy": refresh_policy,
         "standings": standings,
         "pairs": pairs,
         "duoImportance": duo_importance,
         "teamDetails": team_details,
     }
+    _snapshot_finished_gameweek(output, fixtures, snapshot_dir)
+    return output
 
 
 def update_standings(
@@ -800,8 +1154,15 @@ def update_standings(
     fetch_json: JsonFetcher | None = None,
     destination: Path | None = None,
     pairings: Iterable[tuple[str, tuple[int, int]]] = PAIRINGS,
+    gameweek_id: int | None = None,
+    snapshot_dir: Path | None = None,
 ) -> JsonObject:
-    output = fetch_standings(fetch_json=fetch_json, pairings=pairings)
+    output = fetch_standings(
+        fetch_json=fetch_json,
+        pairings=pairings,
+        gameweek_id=gameweek_id,
+        snapshot_dir=snapshot_dir,
+    )
     destination = destination or PUBLIC_DIR / "standings.json"
     _write_json(output, destination)
     return output

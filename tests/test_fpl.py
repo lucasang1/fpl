@@ -1,9 +1,11 @@
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from services.fpl import (
+    _apply_gameweek_status_counts,
     _format_duo_importance,
     _format_pairs,
     _format_player_ownership,
@@ -11,7 +13,9 @@ from services.fpl import (
     _format_standings,
     _format_team_details,
     _fetch_chips,
+    _refresh_policy,
     _select_gameweek,
+    fetch_standings,
     update_standings,
 )
 
@@ -155,6 +159,47 @@ class FormatStandingsTests(unittest.TestCase):
 
         self.assertEqual(standings[0]["chip"], "TC")
 
+    def test_uses_entry_history_for_selected_gameweek_scores_and_ranks(self):
+        entries = [
+            {
+                "rank": 1,
+                "entry": 1,
+                "entry_name": "Current leader",
+                "player_name": "Leader Manager",
+                "event_total": 99,
+                "total": 199,
+            },
+            {
+                "rank": 2,
+                "entry": 2,
+                "entry_name": "GW1 leader",
+                "player_name": "Past Manager",
+                "event_total": 1,
+                "total": 100,
+            },
+        ]
+        entry_event_data = {
+            1: {"entry_history": {"points": 10, "total_points": 10}},
+            2: {"entry_history": {"points": 20, "total_points": 20}},
+        }
+
+        standings = _format_standings(
+            entries, 1, entry_event_data=entry_event_data
+        )
+
+        self.assertEqual(
+            [
+                (
+                    team["rank"],
+                    team["team"],
+                    team["gameweekPoints"],
+                    team["totalPoints"],
+                )
+                for team in standings
+            ],
+            [(1, "GW1 leader", 20, 20), (2, "Current leader", 10, 10)],
+        )
+
 
 class FetchChipsTests(unittest.TestCase):
     def test_maps_active_chips_to_short_labels(self):
@@ -177,6 +222,57 @@ class FetchChipsTests(unittest.TestCase):
         )
 
 
+class RefreshPolicyTests(unittest.TestCase):
+    def test_live_fixture_polls_every_twenty_seconds(self):
+        policy = _refresh_policy(
+            [
+                {
+                    "started": True,
+                    "finished": False,
+                    "finished_provisional": False,
+                    "kickoff_time": "2024-08-18T07:00:00Z",
+                }
+            ],
+            now=datetime(2024, 8, 18, 8, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(policy["mode"], "live")
+        self.assertEqual(policy["pollMs"], 20_000)
+
+    def test_recently_finished_fixture_polls_every_two_minutes(self):
+        policy = _refresh_policy(
+            [
+                {
+                    "started": True,
+                    "finished": True,
+                    "minutes": 90,
+                    "kickoff_time": "2024-08-18T07:00:00Z",
+                }
+            ],
+            now=datetime(2024, 8, 18, 8, 55, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(policy["mode"], "settling")
+        self.assertEqual(policy["pollMs"], 120_000)
+        self.assertEqual(policy["lastMatchEndedAt"], "2024-08-18T08:50:00+00:00")
+
+    def test_old_finished_fixture_stops_auto_polling(self):
+        policy = _refresh_policy(
+            [
+                {
+                    "started": True,
+                    "finished": True,
+                    "minutes": 90,
+                    "kickoff_time": "2024-08-18T07:00:00Z",
+                }
+            ],
+            now=datetime(2024, 8, 18, 10, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(policy["mode"], "frozen")
+        self.assertIsNone(policy["pollMs"])
+
+
 class FormatPairsTests(unittest.TestCase):
     def setUp(self):
         self.teams = [
@@ -186,6 +282,8 @@ class FormatPairsTests(unittest.TestCase):
                 "manager": "One",
                 "gameweekPoints": 10,
                 "totalPoints": 100,
+                "inPlay": 2,
+                "toStart": 1,
                 "chip": "BB",
             },
             {
@@ -194,6 +292,8 @@ class FormatPairsTests(unittest.TestCase):
                 "manager": "Two",
                 "gameweekPoints": 20,
                 "totalPoints": 200,
+                "inPlay": 3,
+                "toStart": 4,
                 "chip": None,
             },
             {
@@ -202,6 +302,8 @@ class FormatPairsTests(unittest.TestCase):
                 "manager": "Mau",
                 "gameweekPoints": 12,
                 "totalPoints": 120,
+                "inPlay": 0,
+                "toStart": 5,
                 "chip": "TC",
             },
         ]
@@ -216,8 +318,12 @@ class FormatPairsTests(unittest.TestCase):
         self.assertEqual([pair["rank"] for pair in pairs], [1, 2])
         self.assertEqual(pairs[0]["gameweekPoints"], 30)
         self.assertEqual(pairs[0]["totalPoints"], 300)
+        self.assertEqual(pairs[0]["inPlay"], 5)
+        self.assertEqual(pairs[0]["toStart"], 5)
         self.assertEqual(pairs[1]["gameweekPoints"], 24)
         self.assertEqual(pairs[1]["totalPoints"], 240)
+        self.assertEqual(pairs[1]["inPlay"], 0)
+        self.assertEqual(pairs[1]["toStart"], 10)
         self.assertEqual([member["id"] for member in pairs[1]["members"]], [3, 3])
         self.assertEqual([member["chip"] for member in pairs[0]["members"]], ["BB", None])
         self.assertEqual([member["chip"] for member in pairs[1]["members"]], ["TC", "TC"])
@@ -225,6 +331,46 @@ class FormatPairsTests(unittest.TestCase):
     def test_rejects_a_missing_configured_team(self):
         with self.assertRaisesRegex(RuntimeError, "missing FPL entry 99"):
             _format_pairs(self.teams, (("Missing pair", (1, 99)),))
+
+
+class GameweekStatusCountTests(unittest.TestCase):
+    def test_counts_double_gameweek_player_in_play_until_all_fixtures_finish(self):
+        standings = [{"id": 1}, {"id": 2}]
+        entry_event_data = {
+            1: {
+                "picks": [
+                    {"element": 10, "multiplier": 1},
+                    {"element": 20, "multiplier": 1},
+                    {"element": 30, "multiplier": 1},
+                    {"element": 40, "multiplier": 0},
+                ],
+            },
+            2: {"picks": [{"element": 40, "multiplier": 1}]},
+        }
+        elements = [
+            {"id": 10, "team": 1},
+            {"id": 20, "team": 2},
+            {"id": 30, "team": 3},
+            {"id": 40, "team": 1},
+        ]
+        fixtures = [
+            {"team_h": 1, "team_a": 9, "started": True, "finished": True},
+            {"team_h": 1, "team_a": 10, "started": False, "finished": False},
+            {"team_h": 2, "team_a": 11, "started": False, "finished": False},
+            {"team_h": 3, "team_a": 12, "started": True, "finished": True},
+        ]
+
+        _apply_gameweek_status_counts(
+            standings,
+            entry_event_data,
+            elements,
+            fixtures,
+        )
+
+        self.assertEqual(standings[0]["inPlay"], 1)
+        self.assertEqual(standings[0]["toStart"], 1)
+        self.assertEqual(standings[1]["inPlay"], 1)
+        self.assertEqual(standings[1]["toStart"], 0)
 
 
 class FormatPlayerOwnershipTests(unittest.TestCase):
@@ -489,19 +635,21 @@ class FormatTeamDetailsTests(unittest.TestCase):
         ]
         fixtures = [
             {
+                "id": 100,
                 "team_h": 1,
                 "team_a": 2,
                 "started": True,
                 "finished": False,
+                "minutes": 60,
                 "kickoff_time": "2024-08-18T07:00:00Z",
             }
         ]
         live_elements = [
-            {"id": 10, "stats": {"total_points": 2}},
-            {"id": 11, "stats": {"total_points": 3}},
-            {"id": 20, "stats": {"total_points": 6}},
-            {"id": 30, "stats": {"total_points": 5}},
-            {"id": 40, "stats": {"total_points": 4}},
+            {"id": 10, "stats": {"total_points": 2, "minutes": 60, "starts": 1}},
+            {"id": 11, "stats": {"total_points": 3, "minutes": 0, "starts": 0}},
+            {"id": 20, "stats": {"total_points": 6, "minutes": 45, "starts": 1}},
+            {"id": 30, "stats": {"total_points": 5, "minutes": 60, "starts": 0}},
+            {"id": 40, "stats": {"total_points": 4, "minutes": 30, "starts": 0}},
         ]
 
         details = _format_team_details(
@@ -575,6 +723,20 @@ class FormatTeamDetailsTests(unittest.TestCase):
         self.assertEqual(details[0]["players"][2]["opponent"], "BRE (H)")
         self.assertEqual(details[0]["players"][2]["fixtureTime"], "Sun 15:00")
         self.assertEqual(details[0]["players"][2]["points"], 5)
+        self.assertEqual(
+            {player["name"]: player["matchStatus"] for player in details[0]["players"]},
+            {
+                "Raya": "In Play",
+                "Gabriel": "Subbed Off",
+                "Saka": "Subbed On",
+                "Watkins": "Subbed Off",
+                "Flekken": "Not In Play",
+                "White": "Not In Play",
+                "Palmer": "Not In Play",
+                "Haaland": "Not In Play",
+            },
+        )
+        self.assertTrue(all(player["isLive"] for player in details[0]["players"]))
 
 
 class UpdateStandingsTests(unittest.TestCase):
@@ -614,7 +776,15 @@ class UpdateStandingsTests(unittest.TestCase):
                 return []
 
             if "/fixtures/" in url:
-                return []
+                return [
+                    {
+                        "team_h": 1,
+                        "team_a": 2,
+                        "started": True,
+                        "finished": True,
+                        "kickoff_time": "2024-08-18T07:00:00Z",
+                    }
+                ]
 
             if "/live/" in url:
                 return {"elements": []}
@@ -640,12 +810,17 @@ class UpdateStandingsTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             destination = Path(temporary_directory) / "standings.json"
+            snapshot_dir = Path(temporary_directory) / "snapshots"
             output = update_standings(
                 fetch_json=fetch_json,
                 destination=destination,
                 pairings=(("Test pair", (10, 20)),),
+                snapshot_dir=snapshot_dir,
             )
             saved_output = json.loads(destination.read_text(encoding="utf-8"))
+            saved_snapshot = json.loads(
+                (snapshot_dir / "gw-7.json").read_text(encoding="utf-8")
+            )
 
         self.assertEqual(len(requested_urls), 11)
         self.assertEqual(
@@ -664,6 +839,161 @@ class UpdateStandingsTests(unittest.TestCase):
         )
         self.assertEqual([team["team"] for team in output["teamDetails"]], ["Team 1", "Team 2"])
         self.assertEqual(saved_output, output)
+        self.assertEqual(saved_snapshot, output)
+
+    def test_does_not_snapshot_until_all_gameweek_fixtures_finish(self):
+        def fetch_json(url):
+            if url.endswith("bootstrap-static/"):
+                return {
+                    "elements": [{"id": 1, "web_name": "Player One", "team": 1}],
+                    "teams": [
+                        {"id": 1, "short_name": "ARS"},
+                        {"id": 2, "short_name": "BRE"},
+                        {"id": 3, "short_name": "CHE"},
+                    ],
+                    "events": [
+                        {
+                            "id": 7,
+                            "name": "Gameweek 7",
+                            "is_current": True,
+                            "finished": False,
+                            "is_next": False,
+                        }
+                    ]
+                }
+
+            if url.endswith("/picks/"):
+                return {
+                    "active_chip": None,
+                    "entry_history": {
+                        "points": 12,
+                        "total_points": 100,
+                        "event_transfers": 0,
+                        "value": 1000,
+                    },
+                    "picks": [{"element": 1, "multiplier": 1}],
+                }
+
+            if url.endswith("/transfers/"):
+                return []
+
+            if "/fixtures/" in url:
+                return [
+                    {
+                        "team_h": 1,
+                        "team_a": 2,
+                        "started": True,
+                        "finished": True,
+                        "kickoff_time": "2024-08-16T11:00:00Z",
+                    },
+                    {
+                        "team_h": 3,
+                        "team_a": 2,
+                        "started": False,
+                        "finished": False,
+                        "kickoff_time": "2024-08-18T11:00:00Z",
+                    },
+                ]
+
+            if "/live/" in url:
+                return {"elements": []}
+
+            if "/entry/" in url:
+                return {"club_badge_src": None}
+
+            return {
+                "league": {"id": 123, "name": "Test League"},
+                "new_entries": {"results": []},
+                "standings": {
+                    "results": [
+                        {
+                            "rank": 1,
+                            "entry": 10,
+                            "entry_name": "Team 1",
+                            "player_name": "Manager 1",
+                            "event_total": 12,
+                            "total": 100,
+                        }
+                    ],
+                    "has_next": False,
+                },
+            }
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            snapshot_dir = Path(temporary_directory) / "snapshots"
+            output = update_standings(
+                fetch_json=fetch_json,
+                destination=Path(temporary_directory) / "standings.json",
+                pairings=(),
+                snapshot_dir=snapshot_dir,
+            )
+
+        self.assertEqual(output["refreshPolicy"]["mode"], "frozen")
+        self.assertFalse((snapshot_dir / "gw-7.json").exists())
+
+    def test_uses_saved_snapshot_for_locked_gameweek(self):
+        requested_urls = []
+        snapshot = {
+            "league": {"id": 123, "name": "Test League"},
+            "gameweek": {"id": 1, "name": "Gameweek 1"},
+            "currentGameweek": {"id": 1, "name": "Gameweek 1"},
+            "availableGameweeks": [{"id": 1, "name": "Gameweek 1"}],
+            "updatedAt": "2024-08-20T00:00:00+00:00",
+            "teamCardImage": "badge",
+            "refreshPolicy": {"mode": "frozen", "pollMs": None},
+            "standings": [{"id": 10, "team": "Saved team", "gameweekPoints": 42}],
+            "pairs": [],
+            "duoImportance": [],
+            "teamDetails": [],
+        }
+
+        def fetch_json(url):
+            requested_urls.append(url)
+            if url.endswith("bootstrap-static/"):
+                return {
+                    "events": [
+                        {
+                            "id": 1,
+                            "name": "Gameweek 1",
+                            "is_current": False,
+                            "finished": True,
+                            "is_next": False,
+                        },
+                        {
+                            "id": 2,
+                            "name": "Gameweek 2",
+                            "is_current": True,
+                            "finished": False,
+                            "is_next": False,
+                        },
+                    ],
+                }
+            self.fail(f"Unexpected network fetch after snapshot hit: {url}")
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            snapshot_dir = Path(temporary_directory) / "snapshots"
+            snapshot_dir.mkdir()
+            (snapshot_dir / "gw-1.json").write_text(
+                json.dumps(snapshot), encoding="utf-8"
+            )
+
+            output = fetch_standings(
+                fetch_json=fetch_json,
+                pairings=(),
+                gameweek_id=1,
+                snapshot_dir=snapshot_dir,
+            )
+
+        self.assertEqual(len(requested_urls), 1)
+        self.assertEqual(output["standings"], snapshot["standings"])
+        self.assertEqual(output["currentGameweek"], {"id": 2, "name": "Gameweek 2"})
+        self.assertEqual(
+            output["availableGameweeks"],
+            [
+                {"id": 2, "name": "Gameweek 2"},
+                {"id": 1, "name": "Gameweek 1"},
+            ],
+        )
 
     def test_includes_ranked_and_new_entries(self):
         def fetch_json(url):

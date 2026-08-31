@@ -15,6 +15,9 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# Local generated FPL snapshots
+data/gameweeks/
+
 # Local environment and secret files
 .env
 .env.*

@@ -40,8 +40,11 @@
             <button id="teams-view" type="button" aria-pressed="false">Individual</button>
           </div>
           <div class="refresh-group">
-            <p id="last-updated" aria-live="off"></p>
-            <button id="refresh" type="button" aria-label="Refresh standings" title="Refresh standings">
+            <label class="gameweek-select-label" for="gameweek-select">
+              <select id="gameweek-select" aria-label="Gameweek"></select>
+            </label>
+            <p id="last-updated" aria-live="off" hidden></p>
+            <button id="refresh" type="button" aria-label="Refresh standings" title="Refresh standings" hidden>
               <svg class="refresh-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20.5 8A8.5 8.5 0 0 0 5.2 5.2L3 7.5"></path>
                 <path d="M3 3.5v4h4"></path>
@@ -52,12 +55,23 @@
           </div>
         </div>
         <table class="standings-table">
+          <colgroup>
+            <col class="col-rank">
+            <col class="col-team">
+            <col class="col-in-play">
+            <col class="col-to-start">
+            <col class="col-gw-indiv">
+            <col class="col-gw-total">
+            <col class="col-total">
+          </colgroup>
           <thead>
             <tr>
               <th scope="col" aria-label="Rank"></th>
               <th scope="col">Team</th>
-              <th scope="col">Manager</th>
-              <th scope="col" class="number">GW</th>
+              <th scope="col" class="number">In<br>Play</th>
+              <th scope="col" class="number">To<br>Start</th>
+              <th scope="col" class="number">Indiv</th>
+              <th scope="col" class="number">Duo</th>
               <th scope="col" class="number">Total</th>
             </tr>
           </thead>

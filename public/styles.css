@@ -514,6 +514,46 @@ th {
   vertical-align: middle;
 }
 
+.rank-cell {
+  white-space: nowrap;
+}
+
+.rank-value {
+  display: inline-block;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.rank-movement {
+  display: inline-block;
+  width: 8px;
+  height: 6px;
+  margin-right: 4px;
+  background: currentColor;
+  vertical-align: middle;
+}
+
+.rank-movement-increase {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.rank-movement-decrease {
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.rank-movement-increase {
+  color: var(--live);
+}
+
+.rank-movement-decrease {
+  color: var(--danger);
+}
+
+.rank-movement-same {
+  background: var(--muted);
+  clip-path: inset(2px 0);
+}
+
 .standings-table td:nth-child(2) {
   overflow: visible;
   white-space: nowrap;
@@ -1479,12 +1519,23 @@ a:hover { color: var(--muted); }
   .standings-table th:first-child,
   .standings-table td:first-child {
     padding-left: 4px;
-    padding-right: 2px;
+    padding-right: 0;
+    text-align: left;
   }
 
   .standings-table th:last-child,
   .standings-table td:last-child {
     padding-right: 8px;
+  }
+
+  .rank-movement {
+    width: 6px;
+    height: 5px;
+    margin-right: 2px;
+  }
+
+  .rank-movement-same {
+    clip-path: inset(1.5px 0);
   }
 
   .team-link { gap: 4px; }
@@ -1531,7 +1582,7 @@ a:hover { color: var(--muted); }
   .pair-members > * { min-height: 24px; }
   .pair-members > * + * { margin-top: 4px; }
   .pair-members-centered > :not(.pair-member-placeholder) {
-    transform: translateY(12px);
+    transform: translateY(14px);
   }
 
   .stacked-number > * { min-height: 24px; }

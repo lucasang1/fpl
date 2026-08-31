@@ -210,8 +210,19 @@ function fitStandingsColumns() {
   const widestRankCell = rankCells.reduce((widest, cell) => {
     const style = getComputedStyle(cell);
     const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+    const contentWidth = [...cell.children].reduce((total, child) => {
+      const childStyle = getComputedStyle(child);
+      return total
+        + child.getBoundingClientRect().width
+        + parseFloat(childStyle.marginLeft)
+        + parseFloat(childStyle.marginRight);
+    }, 0);
     context.font = style.font;
-    return Math.max(widest, Math.ceil(context.measureText(cell.textContent.trim()).width + padding));
+    return Math.max(
+      widest,
+      Math.ceil(contentWidth + padding),
+      Math.ceil(context.measureText(cell.textContent.trim()).width + padding),
+    );
   }, 0);
   const widestTeamCell = teamCells.reduce((widest, cell) => {
     const style = getComputedStyle(cell);
@@ -532,6 +543,32 @@ function createCell(value, className, label) {
   return element;
 }
 
+function createRankCell(rank, movement) {
+  const element = createCell("", "rank-cell", "Rank");
+  const value = document.createElement("span");
+  value.className = "rank-value";
+  value.textContent = rank;
+
+  if (["increase", "decrease", "same"].includes(movement?.direction)) {
+    const indicator = document.createElement("span");
+    indicator.className = `rank-movement rank-movement-${movement.direction}`;
+    indicator.setAttribute("aria-hidden", "true");
+    element.title = movement.direction === "same"
+      ? `Rank unchanged at ${movement.currentRank}`
+      : `Rank ${movement.direction}d from ${movement.previousRank} to ${movement.currentRank}`;
+    element.setAttribute(
+      "aria-label",
+      movement.direction === "same"
+        ? `Rank ${rank}, unchanged from last gameweek`
+        : `Rank ${rank}, ${movement.direction}d from ${movement.previousRank}`,
+    );
+    element.append(indicator);
+  }
+
+  element.append(value);
+  return element;
+}
+
 function createStackedCell(values, className, label) {
   const element = createCell("", ["stacked-number", className].filter(Boolean).join(" "), label);
   element.replaceChildren(
@@ -673,7 +710,7 @@ function createTeamRow(team) {
   teamCell.dataset.label = "Team";
   teamCell.append(createTeamLink(team));
   row.append(
-    createCell(team.rank, "", "Rank"),
+    createRankCell(team.rank, team.rankMovement),
     teamCell,
     createCell(team.inPlay ?? 0, "number", "In Play"),
     createCell(team.toStart ?? 0, "number", "To Start"),
@@ -716,7 +753,7 @@ function createPairRow(pair) {
   }
 
   row.append(
-    createCell(pair.rank, "", "Rank"),
+    createRankCell(pair.rank, pair.rankMovement),
     teamCell,
     createStackedCell(pair.members.map((member) => member.inPlay ?? 0), "number", "In Play"),
     createStackedCell(pair.members.map((member) => member.toStart ?? 0), "number", "To Start"),

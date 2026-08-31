@@ -6,6 +6,7 @@ from pathlib import Path
 
 from services.fpl import (
     _apply_gameweek_status_counts,
+    _apply_rank_movements,
     _format_duo_importance,
     _format_pairs,
     _format_player_ownership,
@@ -331,6 +332,45 @@ class FormatPairsTests(unittest.TestCase):
     def test_rejects_a_missing_configured_team(self):
         with self.assertRaisesRegex(RuntimeError, "missing FPL entry 99"):
             _format_pairs(self.teams, (("Missing pair", (1, 99)),))
+
+
+class RankMovementTests(unittest.TestCase):
+    def test_compares_team_and_pair_ranks_against_previous_snapshot(self):
+        data = {
+            "standings": [
+                {"id": 1, "rank": 2},
+                {"id": 2, "rank": 1},
+                {"id": 3, "rank": "—"},
+            ],
+            "pairs": [
+                {"name": "Alpha", "rank": 1},
+                {"name": "Beta", "rank": 2},
+                {"name": "Level", "rank": 3},
+            ],
+        }
+        previous_snapshot = {
+            "standings": [
+                {"id": 1, "rank": 1},
+                {"id": 2, "rank": 2},
+                {"id": 3, "rank": 3},
+            ],
+            "pairs": [
+                {"name": "Alpha", "rank": 2},
+                {"name": "Beta", "rank": 1},
+                {"name": "Level", "rank": 3},
+            ],
+        }
+
+        _apply_rank_movements(data, previous_snapshot)
+
+        self.assertEqual(data["standings"][0]["rankMovement"]["direction"], "decrease")
+        self.assertEqual(data["standings"][0]["rankMovement"]["previousRank"], 1)
+        self.assertEqual(data["standings"][0]["rankMovement"]["currentRank"], 2)
+        self.assertEqual(data["standings"][1]["rankMovement"]["direction"], "increase")
+        self.assertNotIn("rankMovement", data["standings"][2])
+        self.assertEqual(data["pairs"][0]["rankMovement"]["direction"], "increase")
+        self.assertEqual(data["pairs"][1]["rankMovement"]["direction"], "decrease")
+        self.assertEqual(data["pairs"][2]["rankMovement"]["direction"], "same")
 
 
 class GameweekStatusCountTests(unittest.TestCase):

@@ -1015,6 +1015,66 @@ def _read_gameweek_snapshot(snapshot_dir: Path, gameweek_id: int) -> JsonObject 
     return data
 
 
+def _numeric_rank(value: Any) -> int | None:
+    return value if isinstance(value, int) else None
+
+
+def _rank_movement(current_rank: Any, previous_rank: Any) -> JsonObject | None:
+    current = _numeric_rank(current_rank)
+    previous = _numeric_rank(previous_rank)
+    if current is None or previous is None:
+        return None
+
+    return {
+        "direction": "same"
+        if current == previous
+        else "increase"
+        if current < previous
+        else "decrease",
+        "previousRank": previous,
+        "currentRank": current,
+    }
+
+
+def _apply_rank_movements(data: JsonObject, previous_snapshot: JsonObject | None) -> None:
+    if previous_snapshot is None:
+        return
+
+    previous_team_ranks = {
+        team["id"]: team.get("rank")
+        for team in previous_snapshot.get("standings", [])
+        if "id" in team
+    }
+    for team in data.get("standings", []):
+        team.pop("rankMovement", None)
+        movement = _rank_movement(team.get("rank"), previous_team_ranks.get(team.get("id")))
+        if movement is not None:
+            team["rankMovement"] = movement
+
+    previous_pair_ranks = {
+        pair["name"]: pair.get("rank")
+        for pair in previous_snapshot.get("pairs", [])
+        if "name" in pair
+    }
+    for pair in data.get("pairs", []):
+        pair.pop("rankMovement", None)
+        movement = _rank_movement(pair.get("rank"), previous_pair_ranks.get(pair.get("name")))
+        if movement is not None:
+            pair["rankMovement"] = movement
+
+
+def _with_previous_rank_movements(data: JsonObject, snapshot_dir: Path | None) -> JsonObject:
+    if snapshot_dir is None:
+        return data
+
+    gameweek_id = data.get("gameweek", {}).get("id")
+    if not isinstance(gameweek_id, int) or gameweek_id <= 1:
+        return data
+
+    _apply_rank_movements(data, _read_gameweek_snapshot(snapshot_dir, gameweek_id - 1))
+    return data
+
+
 def _with_current_gameweek_metadata(
     data: JsonObject, current_gameweek: JsonObject, available_gameweeks: list[JsonObject]
 ) -> JsonObject:
@@ -1084,8 +1144,11 @@ def fetch_standings(
     ):
         snapshot = _read_gameweek_snapshot(snapshot_dir, gameweek["id"])
         if snapshot is not None:
-            return _with_current_gameweek_metadata(
-                snapshot, current_gameweek, available_gameweeks
+            return _with_previous_rank_movements(
+                _with_current_gameweek_metadata(
+                    snapshot, current_gameweek, available_gameweeks
+                ),
+                snapshot_dir,
             )
 
     league, entries = _fetch_league(fetch_json)
@@ -1145,6 +1208,7 @@ def fetch_standings(
         "duoImportance": duo_importance,
         "teamDetails": team_details,
     }
+    _with_previous_rank_movements(output, snapshot_dir)
     _snapshot_finished_gameweek(output, fixtures, snapshot_dir)
     return output
 

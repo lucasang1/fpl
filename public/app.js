@@ -56,7 +56,7 @@ const hoverLayout = window.matchMedia("(hover: hover) and (pointer: fine)");
 const preferredDarkTheme = window.matchMedia("(prefers-color-scheme: dark)");
 const lastViewedTeamKey = "fpl:lastViewedTeamId";
 const themeStorageKey = "fpl:theme";
-const standingsStorageKey = "fpl:standingsSnapshot";
+const standingsStorageKey = "fpl:standingsSnapshot:v2";
 const themeTransitionDuration = 1120;
 /*
  * Desktop importance-card pagination experiment, parked for now.

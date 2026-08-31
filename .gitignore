@@ -16,7 +16,7 @@ htmlcov/
 .ruff_cache/
 
 # Local generated FPL snapshots
-data/gameweeks/
+# data/gameweeks/
 
 # Local environment and secret files
 .env

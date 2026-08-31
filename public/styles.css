@@ -581,7 +581,7 @@ a:hover { color: var(--muted); }
 .team-captain {
   overflow: hidden;
   color: var(--muted);
-  font-size: .75rem;
+  font-size: .825rem;
   font-style: italic;
   font-weight: 500;
   line-height: 1.15;
@@ -1493,7 +1493,7 @@ a:hover { color: var(--muted); }
 
   .team-name-line { gap: 3px; }
 
-  .team-captain { font-size: .4rem; }
+  .team-captain { font-size: .44rem; }
 
   .chip-pill {
     min-width: 2em;

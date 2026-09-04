@@ -1265,7 +1265,7 @@ function createValueDetails(detail) {
   const section = document.createElement("section");
   const team = document.createElement("p");
   const bank = document.createElement("p");
-  team.textContent = `Team: ${formatTeamValue(detail.teamValue)}`;
+  team.textContent = `Team: ${formatTeamValue(detail.teamValue - detail.bank)}`;
   bank.textContent = `Bank: ${formatTeamValue(detail.bank)}`;
   section.append(team, bank);
   return section;

@@ -473,7 +473,7 @@ def _build_player_context(
             "isLive": live_fixture is not None,
         }
 
-    return players, player_context
+    return players, player_context, live_points
 
 
 def _format_player_ownership(
@@ -548,7 +548,7 @@ def _format_duo_importance(
     if not pairs:
         return []
 
-    players, player_context = _build_player_context(
+    players, player_context, _ = _build_player_context(
         elements, teams, fixtures, live_elements
     )
 
@@ -694,7 +694,7 @@ def _format_team_details(
     if not standings:
         return []
 
-    players, player_context = _build_player_context(
+    players, player_context, _ = _build_player_context(
         elements, teams, fixtures, live_elements
     )
     team_exposure: dict[int, dict[int, int]] = {}
@@ -844,6 +844,31 @@ def _apply_gameweek_status_counts(
         counts = counts_by_entry.get(team["id"], {"inPlay": 0, "toStart": 0})
         team["inPlay"] = counts["inPlay"]
         team["toStart"] = counts["toStart"]
+
+
+def _apply_live_gameweek_points(
+    standings: Iterable[JsonObject],
+    entry_event_data: dict[int, JsonObject],
+    live_elements: Iterable[JsonObject],
+) -> None:
+    live_points = {
+        element["id"]: element.get("stats", {}).get("total_points", 0)
+        for element in live_elements
+    }
+    for team in standings:
+        if team["gameweekPoints"] != 0:
+            continue
+        entry_id = team["id"]
+        event_data = entry_event_data.get(entry_id, {})
+        transfer_cost = event_data.get("entry_history", {}).get("event_transfers_cost", 0)
+        live_sum = sum(
+            live_points.get(pick["element"], 0) * pick.get("multiplier", 0)
+            for pick in event_data.get("picks", [])
+        )
+        live_gw_points = live_sum - transfer_cost
+        team["gameweekPoints"] = live_gw_points
+        if isinstance(team["totalPoints"], int | float):
+            team["totalPoints"] = team["totalPoints"] + live_gw_points
 
 
 def _format_standings(
@@ -1153,6 +1178,7 @@ def fetch_standings(
         bootstrap["elements"],
         fixtures,
     )
+    _apply_live_gameweek_points(standings, entry_event_data, live.get("elements", []))
     pairs = _format_pairs(standings, pairings)
     duo_importance = _format_duo_importance(
         pairs,

@@ -1389,6 +1389,7 @@ function renderActiveView() {
   const isPairs = activeView === "pairs";
   pairsViewButton.setAttribute("aria-pressed", String(isPairs));
   teamsViewButton.setAttribute("aria-pressed", String(!isPairs));
+  standingsCard.classList.toggle("view-individual", !isPairs);
   tbody.replaceChildren(
     ...(isPairs ? standingsData.pairs.map(createPairRow) : standingsData.standings.map(createTeamRow)),
   );

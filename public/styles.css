@@ -1708,8 +1708,17 @@ a:hover { color: var(--muted); }
     gap: 3px;
   }
 
+
   .team-player-list {
     --ownership-columns: minmax(62px, 1fr) minmax(3ch, max-content) minmax(6ch, max-content) minmax(5ch, max-content);
   }
 
 }
+
+/* Hide Duo column in Individual view */
+.view-individual .standings-table col.col-gw-total,
+.view-individual .standings-table th:nth-child(6),
+.view-individual .standings-table td:nth-child(6) {
+  display: none;
+}
+

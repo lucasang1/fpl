@@ -373,26 +373,7 @@ def _live_match_status(
 ) -> str | None:
     if not fixture:
         return None
-
-    stats = live_element.get("stats", {})
-    fixture_id = fixture.get("id")
-    fixture_minutes = _stat_number(fixture.get("minutes"))
-    player_minutes = _fixture_player_stat(live_element, fixture_id, "minutes")
-    player_starts = _fixture_player_stat(live_element, fixture_id, "starts")
-    player_minutes = (
-        _stat_number(stats.get("minutes")) if player_minutes is None else player_minutes
-    )
-    player_started = (
-        _stat_number(stats.get("starts")) if player_starts is None else player_starts
-    ) > 0
-
-    if player_started and player_minutes >= fixture_minutes:
-        return "In Play"
-    if player_minutes == 0:
-        return "Not In Play"
-    if player_minutes < fixture_minutes:
-        return "Subbed Off"
-    return "In Play" if player_started else "Subbed On"
+    return "Live"
 
 
 def _build_player_context(

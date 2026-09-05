@@ -903,7 +903,7 @@ function openImportanceDialog(player, anchor) {
   importanceDialogTitle.textContent = player.name;
   importanceDialogBody.replaceChildren(
     createTeamPickSection("Started", startedTeams),
-    createTeamPickSection("Not In Play", benchedTeams),
+    createTeamPickSection("Benched", benchedTeams),
     createPointDetails(player.pointDetails),
   );
 

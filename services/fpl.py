@@ -915,26 +915,30 @@ def _format_standings(
             }
         )
     if should_rank_by_event:
-        standings.sort(
-            key=lambda team: (
-                not isinstance(team["totalPoints"], int | float),
-                -team["totalPoints"] if isinstance(team["totalPoints"], int | float) else 0,
-                team["team"].casefold(),
-            )
-        )
-        previous_total: int | float | None = None
-        previous_rank: int | None = None
-        for position, team in enumerate(standings, start=1):
-            total = team["totalPoints"]
-            if not isinstance(total, int | float):
-                team["rank"] = "—"
-            elif total == previous_total:
-                team["rank"] = previous_rank
-            else:
-                team["rank"] = position
-                previous_total = total
-                previous_rank = position
+        _sort_and_rank_standings(standings)
     return standings
+
+
+def _sort_and_rank_standings(standings: list[JsonObject]) -> None:
+    standings.sort(
+        key=lambda team: (
+            not isinstance(team["totalPoints"], int | float),
+            -team["totalPoints"] if isinstance(team["totalPoints"], int | float) else 0,
+            team["team"].casefold(),
+        )
+    )
+    previous_total: int | float | None = None
+    previous_rank: int | None = None
+    for position, team in enumerate(standings, start=1):
+        total = team["totalPoints"]
+        if not isinstance(total, int | float):
+            team["rank"] = "—"
+        elif total == previous_total:
+            team["rank"] = previous_rank
+        else:
+            team["rank"] = position
+            previous_total = total
+            previous_rank = position
 
 
 def _format_pairs(
@@ -1178,6 +1182,7 @@ def fetch_standings(
         fixtures,
     )
     _apply_live_gameweek_points(standings, entry_event_data, live.get("elements", []))
+    _sort_and_rank_standings(standings)
     pairs = _format_pairs(standings, pairings)
     duo_importance = _format_duo_importance(
         pairs,

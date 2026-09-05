@@ -856,8 +856,6 @@ def _apply_live_gameweek_points(
         for element in live_elements
     }
     for team in standings:
-        if team["gameweekPoints"] != 0:
-            continue
         entry_id = team["id"]
         event_data = entry_event_data.get(entry_id, {})
         transfer_cost = event_data.get("entry_history", {}).get("event_transfers_cost", 0)
@@ -866,9 +864,10 @@ def _apply_live_gameweek_points(
             for pick in event_data.get("picks", [])
         )
         live_gw_points = live_sum - transfer_cost
+        prev_gw = team["gameweekPoints"] if isinstance(team["gameweekPoints"], int | float) else 0
         team["gameweekPoints"] = live_gw_points
         if isinstance(team["totalPoints"], int | float):
-            team["totalPoints"] = team["totalPoints"] + live_gw_points
+            team["totalPoints"] = team["totalPoints"] - prev_gw + live_gw_points
 
 
 def _format_standings(

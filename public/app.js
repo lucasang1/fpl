@@ -1079,11 +1079,14 @@ function playerCaptainLabel(player) {
   return "";
 }
 
-function teamPlayerPoints(player) {
-  return player.isCaptain && Number.isFinite(player.points) ? player.points * 2 : player.points;
+function teamPlayerPoints(player, chip) {
+  if (player.isCaptain && Number.isFinite(player.points)) {
+    return player.points * (chip === "TC" ? 3 : 2);
+  }
+  return player.points;
 }
 
-function createTeamPlayerRow(player) {
+function createTeamPlayerRow(player, chip) {
   const row = document.createElement("div");
   const name = document.createElement("button");
   const opponent = document.createElement("span");
@@ -1100,7 +1103,7 @@ function createTeamPlayerRow(player) {
   name.replaceChildren(createPlayerNameContent(player, player.name, playerCaptainLabel(player)));
   opponent.textContent = player.opponent;
   fixtureTime.textContent = player.matchStatus || player.fixtureTime || "-";
-  points.textContent = teamPlayerPoints(player);
+  points.textContent = teamPlayerPoints(player, chip);
   const openPlayerTeams = () => {
     openImportanceDialog(playerWithImportanceTeams(player), name);
   };
@@ -1358,7 +1361,7 @@ function renderTeamDetail() {
   players.className = "ownership-list team-player-list";
   players.replaceChildren(
     createTeamPlayerHeader(),
-    ...detail.players.map(createTeamPlayerRow),
+    ...detail.players.map((p) => createTeamPlayerRow(p, detail.chip)),
   );
 
   teamDetail.replaceChildren(header, players);

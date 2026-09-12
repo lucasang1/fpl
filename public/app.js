@@ -38,7 +38,6 @@ const importancePageSize = 14;
 let standingsRefreshTimer;
 let lastFetchAt = 0;
 let isLoadingStandings = false;
-let lastPlayerPointsSnapshot = new Map();
 let selectedGameweekId;
 let headerBaseFontSizes = [];
 let headerScaleFrame;
@@ -407,32 +406,6 @@ function scheduleStandingsRefresh() {
   standingsRefreshTimer = setTimeout(() => {
     loadStandings(false, { quiet: true });
   }, pollMs);
-}
-
-function collectPlayerPoints(data) {
-  const points = new Map();
-
-  for (const detail of data?.teamDetails || []) {
-    for (const player of detail.players || []) {
-      if (Number.isFinite(player.points)) points.set(player.id, player.points);
-    }
-  }
-
-  for (const duo of data?.duoImportance || []) {
-    for (const player of duo.players || []) {
-      if (Number.isFinite(player.points)) points.set(player.id, player.points);
-    }
-  }
-
-  return points;
-}
-
-function playerPointsChanged(nextPoints) {
-  for (const [playerId, points] of nextPoints) {
-    if (lastPlayerPointsSnapshot.get(playerId) !== points) return true;
-  }
-
-  return false;
 }
 
 function animateRefreshIcon() {
@@ -1427,16 +1400,8 @@ function createTeamPlayerHeader() {
   return row;
 }
 
-function renderStandings(data, { saveSnapshot = true, animatePointChanges = false } = {}) {
-  const nextPlayerPointsSnapshot = collectPlayerPoints(data);
-  if (
-    animatePointChanges
-    && lastPlayerPointsSnapshot.size
-    && playerPointsChanged(nextPlayerPointsSnapshot)
-  ) {
-    animateRefreshIcon();
-  }
-  lastPlayerPointsSnapshot = nextPlayerPointsSnapshot;
+function renderStandings(data, { saveSnapshot = true, animateRefresh = false } = {}) {
+  if (animateRefresh) animateRefreshIcon();
   standingsData = data;
   leagueName.textContent = data.league.name;
   status.textContent = data.gameweek.name;
@@ -1471,7 +1436,7 @@ async function loadStandings(force = false, { quiet = false } = {}) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Standings are unavailable");
     lastFetchAt = Date.now();
-    renderStandings(data, { animatePointChanges: quiet && !force });
+    renderStandings(data, { animateRefresh: quiet && !force });
   } catch (error) {
     if (!quiet || !standingsData) {
       status.textContent = error instanceof Error ? error.message : "Standings are unavailable";

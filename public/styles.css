@@ -164,7 +164,7 @@ main {
   }
 
   .ownership-list {
-    padding: 0 0 8px;
+    padding: 0 0 0;
   }
 
   .team-detail > .team-player-list {

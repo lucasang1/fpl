@@ -783,6 +783,10 @@ a:hover { color: var(--muted); }
   font-size: .82rem;
 }
 
+.ownership-row:not(.ownership-header) {
+  cursor: pointer;
+}
+
 @supports (grid-template-columns: subgrid) {
   .ownership-row {
     grid-template-columns: subgrid;

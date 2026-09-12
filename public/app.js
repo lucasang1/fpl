@@ -41,7 +41,6 @@ let selectedGameweekId;
 let headerBaseFontSizes = [];
 let headerScaleFrame;
 let teamColumnFitFrame;
-let importanceCloseTimer;
 let transferCloseTimer;
 const desktopLayout = window.matchMedia("(min-width: 901px)");
 const mobileLayout = window.matchMedia("(max-width: 700px)");
@@ -763,7 +762,7 @@ function createTeamPickSection(title, teams) {
 }
 
 function usesDesktopPlayerPopover() {
-  return false;
+  return desktopLayout.matches && hoverLayout.matches;
 }
 
 function importanceDialogRow(anchor) {
@@ -774,15 +773,12 @@ function importanceDialogContainer(anchor) {
   return anchor?.closest(".team-player-row") ? teamDetail : ownershipPanel;
 }
 
-function importanceDialogSide(anchor) {
-  return anchor?.closest(".team-player-row") ? "left" : "right";
-}
-
 function positionImportanceDialog(anchor) {
   if (!importanceDialog?.open || !anchor) return;
 
   const isPopover = activeImportanceMode === "popover";
   const spacing = isPopover ? 12 : 8;
+  const rightPopoverInsetRatio = 0.6;
   const viewportPadding = 12;
   const anchorRect = anchor.getBoundingClientRect();
   const dialogWidth = importanceDialog.offsetWidth;
@@ -795,13 +791,13 @@ function positionImportanceDialog(anchor) {
   if (isPopover) {
     const rowRect = importanceDialogRow(anchor).getBoundingClientRect();
     const containerRect = importanceDialogContainer(anchor)?.getBoundingClientRect() || anchorRect;
-    left = importanceDialogSide(anchor) === "left"
-      ? containerRect.left - dialogWidth - spacing
-      : containerRect.right + spacing;
+    left = containerRect.right + spacing - (dialogWidth * rightPopoverInsetRatio);
     top = rowRect.top;
   } else {
     const nameRect = anchor.querySelector(".player-name-text")?.getBoundingClientRect();
-    const anchorRight = nameRect ? nameRect.right : anchorRect.right;
+    const anchorRight = mobileLayout.matches && nameRect
+      ? nameRect.right
+      : anchorRect.right;
     left = anchorRight + spacing;
     top = anchorRect.top - spacing;
   }
@@ -821,7 +817,6 @@ function openImportanceDialog(player, anchor) {
   const teams = player.teams || {};
   const startedTeams = teams.started || [];
   const benchedTeams = teams.benched || [];
-  clearTimeout(importanceCloseTimer);
   if (importanceDialog.open && activeImportanceMode !== mode) {
     closeImportanceDialog();
   }
@@ -883,31 +878,27 @@ function createPointDetails(pointDetails) {
 }
 
 function closeImportanceDialog() {
-  clearTimeout(importanceCloseTimer);
   if (importanceDialog?.open) importanceDialog.close();
   activeImportanceAnchor = undefined;
   activeImportanceMode = "modal";
   importanceDialog?.classList.remove("importance-dialog-hover");
 }
 
-function scheduleCloseImportanceDialog() {
-  if (!usesDesktopPlayerPopover()) return;
-
-  clearTimeout(importanceCloseTimer);
-  importanceCloseTimer = setTimeout(() => {
-    const activeRow = importanceDialogRow(activeImportanceAnchor);
-    const hasHover = activeRow?.matches(":hover") || importanceDialog?.matches(":hover");
-
-    if (!hasHover) closeImportanceDialog();
-  }, 140);
-}
-
 function addPlayerDialogInteractions(row, button, getPlayer) {
-  const openPlayerDialog = () => {
+  const openPlayerDialog = (event) => {
+    if (usesDesktopPlayerPopover()) {
+      event.preventDefault();
+      if (activeImportanceAnchor === button && importanceDialog.open) {
+        closeImportanceDialog();
+        return;
+      }
+      openImportanceDialog(getPlayer(), button);
+      return;
+    }
     openImportanceDialog(getPlayer(), button);
   };
 
-  button.addEventListener("click", openPlayerDialog);
+  row.addEventListener("click", openPlayerDialog);
 }
 
 function playerCrestUrl(player) {
@@ -1021,16 +1012,7 @@ function createTeamPlayerRow(player, chip) {
   opponent.textContent = player.opponent;
   fixtureTime.textContent = player.matchStatus || player.fixtureTime || "-";
   points.textContent = teamPlayerPoints(player, chip);
-  const openPlayerTeams = () => {
-    openImportanceDialog(playerWithImportanceTeams(player), name);
-  };
   addPlayerDialogInteractions(row, name, () => playerWithImportanceTeams(player));
-  row.addEventListener("click", () => {
-    if (!usesDesktopPlayerPopover()) openPlayerTeams();
-  });
-  name.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
   row.append(name, opponent, fixtureTime, points);
   return row;
 }
@@ -1480,12 +1462,16 @@ importanceNext.addEventListener("click", () => {
   renderOwnership();
 });
 importanceDialogClose.addEventListener("click", closeImportanceDialog);
-importanceDialog.addEventListener("mouseenter", () => clearTimeout(importanceCloseTimer));
-importanceDialog.addEventListener("mouseleave", scheduleCloseImportanceDialog);
-importanceDialog.addEventListener("focusin", () => clearTimeout(importanceCloseTimer));
-importanceDialog.addEventListener("focusout", scheduleCloseImportanceDialog);
 importanceDialog.addEventListener("click", (event) => {
   if (event.target === importanceDialog) closeImportanceDialog();
+});
+document.addEventListener("click", (event) => {
+  if (activeImportanceMode !== "popover" || !importanceDialog.open) return;
+  const activeRow = importanceDialogRow(activeImportanceAnchor);
+  if (importanceDialog.contains(event.target) || activeRow?.contains(event.target)) {
+    return;
+  }
+  closeImportanceDialog();
 });
 importanceDialog.addEventListener("close", () => {
   activeImportanceAnchor = undefined;

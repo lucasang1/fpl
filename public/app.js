@@ -1157,9 +1157,25 @@ function createTransferList(detail) {
 
 function createChipDetails(detail) {
   const section = document.createElement("section");
-  const item = document.createElement("p");
-  item.textContent = `Chips played: ${detail.chip || "-"}`;
-  section.append(item);
+  const chipsPlayed = Array.isArray(detail.chipsPlayed)
+    ? detail.chipsPlayed
+    : (detail.chip ? [{ chip: detail.chip }] : []);
+
+  if (!chipsPlayed.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "Chips played: -";
+    section.append(empty);
+    return section;
+  }
+
+  const list = document.createElement("ul");
+  for (const played of chipsPlayed) {
+    const item = document.createElement("li");
+    const gameweek = Number.isFinite(played.event) ? `GW${played.event} ` : "";
+    item.textContent = `${gameweek}${formatChipName(played.chip)}`;
+    list.append(item);
+  }
+  section.append(list);
   return section;
 }
 

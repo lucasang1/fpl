@@ -266,6 +266,41 @@ def _fetch_transfer_data(
         return dict(executor.map(fetch_transfers, entries))
 
 
+def _fetch_chip_history(
+    entries: Iterable[JsonObject], gameweek_id: int, fetch_json: JsonFetcher
+) -> dict[int, list[JsonObject]]:
+    def fetch_chips(entry: JsonObject) -> tuple[int, list[JsonObject]]:
+        entry_id = entry["entry"]
+        try:
+            data = fetch_json(f"{FPL_API_URL}/entry/{entry_id}/history/")
+        except Exception:
+            data = {}
+
+        chips = data.get("chips", []) if isinstance(data, dict) else []
+        if not isinstance(chips, list):
+            chips = []
+        return (
+            entry_id,
+            [
+                {
+                    "event": chip.get("event"),
+                    "chip": CHIP_LABELS.get(chip.get("name"), chip.get("name")),
+                }
+                for chip in chips
+                if isinstance(chip, dict)
+                and isinstance(chip.get("event"), int)
+                and chip["event"] <= gameweek_id
+                and chip.get("name")
+            ],
+        )
+
+    entries = list(entries)
+    if not entries:
+        return {}
+    with ThreadPoolExecutor(max_workers=min(8, len(entries))) as executor:
+        return dict(executor.map(fetch_chips, entries))
+
+
 def _fetch_entry_event_data(
     entries: Iterable[JsonObject], gameweek_id: int, fetch_json: JsonFetcher
 ) -> dict[int, JsonObject]:
@@ -684,6 +719,7 @@ def _format_team_details(
     standings: Iterable[JsonObject],
     entry_event_data: dict[int, JsonObject],
     transfer_data: dict[int, list[JsonObject]],
+    chip_history: dict[int, list[JsonObject]],
     gameweek_id: int,
     elements: Iterable[JsonObject],
     teams: Iterable[JsonObject],
@@ -794,6 +830,7 @@ def _format_team_details(
                     transfer_data.get(entry_id, []), gameweek_id, players
                 ),
                 "chip": CHIP_LABELS.get(event_data.get("active_chip")),
+                "chipsPlayed": chip_history.get(entry_id, []),
                 "teamValue": _format_team_value(entry_history.get("value")),
                 "bank": _format_bank(entry_history, event_picks),
                 "players": picks,
@@ -1024,6 +1061,37 @@ def _read_gameweek_snapshot(snapshot_dir: Path, gameweek_id: int) -> JsonObject 
     return data
 
 
+def _with_snapshot_chip_history(data: JsonObject, snapshot_dir: Path | None) -> JsonObject:
+    if snapshot_dir is None:
+        return data
+
+    gameweek_id = data.get("gameweek", {}).get("id")
+    if not isinstance(gameweek_id, int):
+        return data
+
+    details = data.get("teamDetails")
+    if not isinstance(details, list):
+        return data
+
+    chip_history: dict[int, list[JsonObject]] = defaultdict(list)
+    for event in range(1, gameweek_id + 1):
+        snapshot = _read_gameweek_snapshot(snapshot_dir, event)
+        if snapshot is None:
+            continue
+        for detail in snapshot.get("teamDetails", []):
+            entry_id = detail.get("id")
+            chip = detail.get("chip")
+            if isinstance(entry_id, int) and chip:
+                chip_history[entry_id].append({"event": event, "chip": chip})
+
+    for detail in details:
+        entry_id = detail.get("id")
+        if isinstance(entry_id, int) and "chipsPlayed" not in detail:
+            detail["chipsPlayed"] = chip_history.get(entry_id, [])
+
+    return data
+
+
 def _numeric_rank(value: Any) -> int | None:
     return value if isinstance(value, int) else None
 
@@ -1154,8 +1222,11 @@ def fetch_standings(
         snapshot = _read_gameweek_snapshot(snapshot_dir, gameweek["id"])
         if snapshot is not None:
             return _with_previous_rank_movements(
-                _with_current_gameweek_metadata(
-                    snapshot, current_gameweek, available_gameweeks
+                _with_snapshot_chip_history(
+                    _with_current_gameweek_metadata(
+                        snapshot, current_gameweek, available_gameweeks
+                    ),
+                    snapshot_dir,
                 ),
                 snapshot_dir,
             )
@@ -1164,6 +1235,7 @@ def fetch_standings(
     badges = _fetch_badges(entries, fetch_json)
     entry_event_data = _fetch_entry_event_data(entries, gameweek["id"], fetch_json)
     transfer_data = _fetch_transfer_data(entries, fetch_json)
+    chip_history = _fetch_chip_history(entries, gameweek["id"], fetch_json)
     chips = _format_chips(entry_event_data)
     standings = _format_standings(
         entries, gameweek["id"], badges, chips, entry_event_data
@@ -1196,6 +1268,7 @@ def fetch_standings(
         standings,
         entry_event_data,
         transfer_data,
+        chip_history,
         gameweek["id"],
         bootstrap["elements"],
         bootstrap.get("teams", []),

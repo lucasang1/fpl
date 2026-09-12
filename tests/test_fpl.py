@@ -13,6 +13,7 @@ from services.fpl import (
     _format_point_details,
     _format_standings,
     _format_team_details,
+    _fetch_chip_history,
     _fetch_chips,
     _refresh_policy,
     _select_gameweek,
@@ -220,6 +221,30 @@ class FetchChipsTests(unittest.TestCase):
         self.assertEqual(
             _fetch_chips(entries, 6, fetch_json),
             {1: "BB", 2: "TC", 3: "FH", 4: "WC"},
+        )
+
+    def test_fetches_chip_history_through_selected_gameweek(self):
+        entries = [{"entry": 1}, {"entry": 2}]
+
+        def fetch_json(url):
+            entry_id = int(url.split("/entry/", 1)[1].split("/", 1)[0])
+            return {
+                "chips": {
+                    1: [
+                        {"event": 1, "name": "bboost"},
+                        {"event": 4, "name": "wildcard"},
+                        {"event": 7, "name": "3xc"},
+                    ],
+                    2: [{"event": 2, "name": "freehit"}],
+                }[entry_id]
+            }
+
+        self.assertEqual(
+            _fetch_chip_history(entries, 4, fetch_json),
+            {
+                1: [{"event": 1, "chip": "BB"}, {"event": 4, "chip": "WC"}],
+                2: [{"event": 2, "chip": "FH"}],
+            },
         )
 
 
@@ -712,6 +737,13 @@ class FormatTeamDetailsTests(unittest.TestCase):
                 ],
                 2: [],
             },
+            {
+                1: [
+                    {"event": 1, "chip": "BB"},
+                    {"event": 3, "chip": "WC"},
+                ],
+                2: [],
+            },
             1,
             elements,
             teams,
@@ -730,6 +762,10 @@ class FormatTeamDetailsTests(unittest.TestCase):
             ],
         )
         self.assertEqual(details[0]["chip"], "WC")
+        self.assertEqual(
+            details[0]["chipsPlayed"],
+            [{"event": 1, "chip": "BB"}, {"event": 3, "chip": "WC"}],
+        )
         self.assertEqual(details[0]["teamValue"], 101.3)
         self.assertEqual(details[0]["bank"], 0.7)
         self.assertEqual(details[1]["transferCost"], 0)
@@ -815,6 +851,9 @@ class UpdateStandingsTests(unittest.TestCase):
             if url.endswith("/transfers/"):
                 return []
 
+            if url.endswith("/history/"):
+                return {"chips": [{"event": 7, "name": "bboost"}]}
+
             if "/fixtures/" in url:
                 return [
                     {
@@ -862,14 +901,14 @@ class UpdateStandingsTests(unittest.TestCase):
                 (snapshot_dir / "gw-7.json").read_text(encoding="utf-8")
             )
 
-        self.assertEqual(len(requested_urls), 11)
+        self.assertEqual(len(requested_urls), 13)
         self.assertEqual(
             len([url for url in requested_urls if url.endswith("/picks/")]),
             2,
         )
         self.assertEqual(output["teamCardImage"], "badge")
         self.assertEqual([team["rank"] for team in output["standings"]], [1, 2])
-        self.assertEqual(
+        self.assertCountEqual(
             [team["badgeUrl"] for team in output["standings"]],
             ["https://example.com/10.png", "https://example.com/20.png"],
         )
@@ -916,6 +955,9 @@ class UpdateStandingsTests(unittest.TestCase):
 
             if url.endswith("/transfers/"):
                 return []
+
+            if url.endswith("/history/"):
+                return {"chips": []}
 
             if "/fixtures/" in url:
                 return [
@@ -984,7 +1026,7 @@ class UpdateStandingsTests(unittest.TestCase):
             "standings": [{"id": 10, "team": "Saved team", "gameweekPoints": 42}],
             "pairs": [],
             "duoImportance": [],
-            "teamDetails": [],
+            "teamDetails": [{"id": 10, "team": "Saved team", "chip": "BB"}],
         }
 
         def fetch_json(url):
@@ -1026,6 +1068,17 @@ class UpdateStandingsTests(unittest.TestCase):
 
         self.assertEqual(len(requested_urls), 1)
         self.assertEqual(output["standings"], snapshot["standings"])
+        self.assertEqual(
+            output["teamDetails"],
+            [
+                {
+                    "id": 10,
+                    "team": "Saved team",
+                    "chip": "BB",
+                    "chipsPlayed": [{"event": 1, "chip": "BB"}],
+                }
+            ],
+        )
         self.assertEqual(output["currentGameweek"], {"id": 2, "name": "Gameweek 2"})
         self.assertEqual(
             output["availableGameweeks"],
@@ -1060,6 +1113,9 @@ class UpdateStandingsTests(unittest.TestCase):
 
             if url.endswith("/transfers/"):
                 return []
+
+            if url.endswith("/history/"):
+                return {"chips": []}
 
             if "/fixtures/" in url:
                 return []

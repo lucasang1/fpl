@@ -105,9 +105,18 @@
       <div class="ownership-panel">
         <div class="ownership-toolbar">
           <h2>Importance</h2>
-          <label class="duo-select-label" for="duo-importance-select">
-            <select id="duo-importance-select"></select>
-          </label>
+          <div class="importance-controls">
+            <button id="live-only-filter" class="live-only-filter" type="button" aria-pressed="false" hidden>
+              <span class="live-only-checkbox" aria-hidden="true"></span>
+              <span class="live-only-label">
+                <span>Filter to</span>
+                <span>Live Only</span>
+              </span>
+            </button>
+            <label class="duo-select-label" for="duo-importance-select">
+              <select id="duo-importance-select"></select>
+            </label>
+          </div>
         </div>
         <div id="player-ownership" class="ownership-list"></div>
         <nav id="importance-pagination" class="importance-pagination" aria-label="Importance pages" hidden>

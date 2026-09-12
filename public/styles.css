@@ -754,6 +754,71 @@ a:hover { color: var(--muted); }
   line-height: 1.2;
 }
 
+.importance-controls {
+  --importance-control-height: 34px;
+  --importance-control-font-size: .6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.live-only-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--importance-control-height);
+  border: 1px solid color-mix(in srgb, var(--live) 50%, var(--border-control));
+  padding: 0 9px;
+  color: var(--live);
+  background: color-mix(in srgb, var(--live) 8%, transparent);
+  font-size: var(--importance-control-font-size);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.live-only-filter[hidden] { display: none; }
+
+.live-only-filter:hover,
+.live-only-filter:focus-visible,
+.live-only-filter[aria-pressed="true"] {
+  color: var(--live);
+  background: color-mix(in srgb, var(--live) 14%, transparent);
+}
+
+.live-only-filter[aria-pressed="true"] {
+  border-color: var(--live);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--live) 18%, transparent);
+}
+
+.live-only-checkbox {
+  position: relative;
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--live);
+  border-radius: 3px;
+  background: transparent;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--live) 14%, transparent),
+    0 0 9px color-mix(in srgb, var(--live) 45%, transparent);
+}
+
+.live-only-filter[aria-pressed="true"] .live-only-checkbox {
+  background: var(--live);
+}
+
+.live-only-label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  line-height: .92;
+}
+
 .duo-select-label {
   display: inline-flex;
   align-items: center;
@@ -764,10 +829,11 @@ a:hover { color: var(--muted); }
 }
 
 .duo-select-label select {
+  height: var(--importance-control-height);
   max-width: 220px;
   border: 1px solid var(--border-control);
   border-radius: 8px;
-  padding: 7px 9px;
+  padding: 0 9px;
   color: var(--strong);
   background: var(--surface);
   font: inherit;
@@ -1599,10 +1665,28 @@ a:hover { color: var(--muted); }
     font-size: .62rem;
   }
 
+  .importance-controls {
+    --importance-control-height: 26px;
+    --importance-control-font-size: .4rem;
+    flex: 1 1 auto;
+    gap: 6px;
+  }
+
+  .live-only-filter {
+    gap: 5px;
+    padding: 0 7px;
+  }
+
+  .live-only-checkbox {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+
   .duo-select-label select {
     width: min(38vw, 120px);
     max-width: 100%;
-    padding: 5px 7px;
+    padding: 0 7px;
   }
 
   .ownership-row {

@@ -14,6 +14,7 @@ const teamDetail = document.querySelector("#team-detail");
 const ownershipPanel = document.querySelector(".ownership-panel");
 const playerOwnership = document.querySelector("#player-ownership");
 const duoImportanceSelect = document.querySelector("#duo-importance-select");
+const liveOnlyFilter = document.querySelector("#live-only-filter");
 const importancePagination = document.querySelector("#importance-pagination");
 const importancePrevious = document.querySelector("#importance-previous");
 const importanceNext = document.querySelector("#importance-next");
@@ -29,6 +30,7 @@ let standingsData;
 let activeView = "pairs";
 let activeTeamId;
 let activeDuoImportanceName = "";
+let liveOnlyImportance = false;
 let updatedAt;
 let activeImportanceAnchor;
 let activeImportanceMode = "modal";
@@ -1339,9 +1341,9 @@ function renderOwnership() {
     duoImportanceSelect.replaceChildren();
     playerOwnership.replaceChildren();
     importancePagination.hidden = true;
+    liveOnlyFilter.hidden = true;
     return;
   }
-
   const selectedDuo =
     duoImportance.find((duo) => duo.name === activeDuoImportanceName) || duoImportance[0];
   activeDuoImportanceName = selectedDuo.name;
@@ -1355,7 +1357,14 @@ function renderOwnership() {
   );
   duoImportanceSelect.value = activeDuoImportanceName;
 
-  const players = selectedDuo.players.slice().sort(
+  const hasLivePlayers = selectedDuo.players.some((player) => player.isLive);
+  liveOnlyFilter.hidden = !hasLivePlayers;
+  if (!hasLivePlayers) liveOnlyImportance = false;
+  liveOnlyFilter.setAttribute("aria-pressed", String(liveOnlyImportance));
+
+  const players = selectedDuo.players.filter(
+    (player) => !liveOnlyImportance || player.isLive,
+  ).sort(
     (a, b) =>
       Math.abs(b.importance) - Math.abs(a.importance) ||
       Math.sign(a.importance) - Math.sign(b.importance) ||
@@ -1481,6 +1490,11 @@ teamsViewButton.addEventListener("click", () => {
 });
 duoImportanceSelect.addEventListener("change", () => {
   activeDuoImportanceName = duoImportanceSelect.value;
+  importancePage = 0;
+  renderOwnership();
+});
+liveOnlyFilter.addEventListener("click", () => {
+  liveOnlyImportance = !liveOnlyImportance;
   importancePage = 0;
   renderOwnership();
 });

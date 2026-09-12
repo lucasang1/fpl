@@ -371,10 +371,21 @@ button:disabled { cursor: wait; opacity: .65; }
   height: 1.1rem;
   overflow: visible;
   fill: none;
+  transform-origin: center;
   stroke: currentColor;
   stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.refresh-icon-spin {
+  animation: refresh-icon-turn 520ms ease-in-out;
+}
+
+@keyframes refresh-icon-turn {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 #last-updated {

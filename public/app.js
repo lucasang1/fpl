@@ -33,18 +33,11 @@ let activeImportanceAnchor;
 let activeImportanceMode = "modal";
 let activeTransferAnchor;
 let importancePage = 0;
-const importancePageSize = 15;
+const importancePageSize = 14;
 let standingsRefreshTimer;
 let lastFetchAt = 0;
 let isLoadingStandings = false;
 let selectedGameweekId;
-/*
- * Desktop importance-card pagination experiment, parked for now.
- * Keeping this commented makes it easy to bring back without redoing the sizing work.
- *
- * let activeImportancePageSize = 14;
- * let isRenderingOwnership = false;
- */
 let headerBaseFontSizes = [];
 let headerScaleFrame;
 let teamColumnFitFrame;
@@ -58,12 +51,6 @@ const lastViewedTeamKey = "fpl:lastViewedTeamId";
 const themeStorageKey = "fpl:theme";
 const standingsStorageKey = "fpl:standingsSnapshot:v2";
 const themeTransitionDuration = 1120;
-/*
- * Desktop importance-card pagination experiment, parked for now.
- *
- * const maxImportancePageSize = 14;
- * const fallbackImportanceRowHeight = 31;
- */
 let teamStatsFitFrame;
 let themeTransitionTimer;
 
@@ -458,82 +445,25 @@ function refreshStandingsAfterResume() {
 function syncOwnershipHeight() {
   if (!standingsCard || !ownershipPanel || !teamDetail) return;
 
+  ownershipPanel.style.maxHeight = "";
+  ownershipPanel.style.height = "";
+  ownershipPanel.classList.remove("ownership-panel-scrollable");
+
   if (mobileLayout.matches) {
     teamDetail.style.maxHeight = "";
     teamDetail.style.height = "";
-    ownershipPanel.style.maxHeight = "";
-    ownershipPanel.style.height = "";
-    ownershipPanel.classList.remove("ownership-panel-scrollable");
     return;
   }
 
   if (!desktopLayout.matches) {
-    ownershipPanel.style.maxHeight = "";
-    ownershipPanel.style.height = "";
     teamDetail.style.maxHeight = "";
     teamDetail.style.height = "";
-    ownershipPanel.classList.remove("ownership-panel-scrollable");
     return;
   }
 
   teamDetail.style.maxHeight = "";
   teamDetail.style.height = "";
-
-  const teamDetailHeight = teamDetail.hidden
-    ? standingsCard.getBoundingClientRect().height
-    : teamDetail.getBoundingClientRect().height;
-  const cardHeight = `${teamDetailHeight}px`;
-  ownershipPanel.style.maxHeight = cardHeight;
-  ownershipPanel.style.height = activeTeamId === undefined ? "" : cardHeight;
-  ownershipPanel.classList.toggle(
-    "ownership-panel-scrollable",
-    ownershipPanel.scrollHeight > ownershipPanel.clientHeight + 1,
-  );
-
-  /*
-   * Desktop importance-card pagination experiment, parked for now.
-   *
-   * const selectedDuo =
-   *   standingsData?.duoImportance?.find((duo) => duo.name === activeDuoImportanceName) ||
-   *   standingsData?.duoImportance?.[0];
-   * if (!isRenderingOwnership && selectedDuo) {
-   *   const measuredPageSize = measureImportancePageSize(selectedDuo.players.length);
-   *   if (measuredPageSize !== activeImportancePageSize) renderOwnership();
-   * }
-   */
 }
-
-/*
- * Desktop importance-card pagination experiment, parked for now.
- *
-function measureImportancePageSize(totalPlayers) {
-  if (!desktopLayout.matches || !ownershipPanel || !playerOwnership) return maxImportancePageSize;
-
-  const panelHeight =
-    ownershipPanel.getBoundingClientRect().height ||
-    Number.parseFloat(ownershipPanel.style.height) ||
-    Number.parseFloat(ownershipPanel.style.maxHeight);
-  if (!Number.isFinite(panelHeight) || panelHeight <= 0) return maxImportancePageSize;
-
-  const toolbar = ownershipPanel.querySelector(".ownership-toolbar");
-  const toolbarHeight = toolbar?.getBoundingClientRect().height || 0;
-  const listStyle = getComputedStyle(playerOwnership);
-  const listPadding =
-    (Number.parseFloat(listStyle.paddingTop) || 0) +
-    (Number.parseFloat(listStyle.paddingBottom) || 0);
-  const rowHeight =
-    playerOwnership.querySelector(".ownership-row")?.getBoundingClientRect().height ||
-    fallbackImportanceRowHeight;
-  const fitRows = (reservedHeight = 0) =>
-    Math.max(1, Math.floor((panelHeight - toolbarHeight - listPadding - reservedHeight) / rowHeight) - 1);
-
-  const pageWithoutPagination = Math.min(maxImportancePageSize, fitRows());
-  if (totalPlayers <= pageWithoutPagination) return pageWithoutPagination;
-
-  const paginationHeight = importancePagination?.getBoundingClientRect().height || 30;
-  return Math.min(maxImportancePageSize, fitRows(paginationHeight));
-}
- */
 
 function createCell(value, className, label) {
   const element = document.createElement("td");
@@ -833,7 +763,7 @@ function createTeamPickSection(title, teams) {
 }
 
 function usesDesktopPlayerPopover() {
-  return desktopLayout.matches && hoverLayout.matches;
+  return false;
 }
 
 function importanceDialogRow(anchor) {
@@ -871,9 +801,7 @@ function positionImportanceDialog(anchor) {
     top = rowRect.top;
   } else {
     const nameRect = anchor.querySelector(".player-name-text")?.getBoundingClientRect();
-    const anchorRight = mobileLayout.matches && nameRect
-      ? nameRect.right
-      : anchorRect.right;
+    const anchorRight = nameRect ? nameRect.right : anchorRect.right;
     left = anchorRight + spacing;
     top = anchorRect.top - spacing;
   }
@@ -975,22 +903,11 @@ function scheduleCloseImportanceDialog() {
 }
 
 function addPlayerDialogInteractions(row, button, getPlayer) {
-  const openDesktopPopover = () => {
-    if (usesDesktopPlayerPopover()) openImportanceDialog(getPlayer(), button);
-  };
-  const openMobileDialog = (event) => {
-    if (usesDesktopPlayerPopover()) {
-      event.preventDefault();
-      return;
-    }
+  const openPlayerDialog = () => {
     openImportanceDialog(getPlayer(), button);
   };
 
-  row.addEventListener("mouseenter", openDesktopPopover);
-  row.addEventListener("mouseleave", scheduleCloseImportanceDialog);
-  button.addEventListener("focus", openDesktopPopover);
-  button.addEventListener("blur", scheduleCloseImportanceDialog);
-  button.addEventListener("click", openMobileDialog);
+  button.addEventListener("click", openPlayerDialog);
 }
 
 function playerCrestUrl(player) {
@@ -1431,27 +1348,12 @@ function renderOwnership() {
       Math.sign(a.importance) - Math.sign(b.importance) ||
       a.name.localeCompare(b.name),
   );
-  /*
-   * Desktop importance-card pagination experiment, parked for now.
-   *
-   * activeImportancePageSize = measureImportancePageSize(players.length);
-   * const pageCount = Math.max(1, Math.ceil(players.length / activeImportancePageSize));
-   * importancePage = Math.min(importancePage, pageCount - 1);
-   * const visiblePlayers = players.slice(
-   *   importancePage * activeImportancePageSize,
-   *   (importancePage + 1) * activeImportancePageSize,
-   * );
-   */
-  const pageCount = mobileLayout.matches
-    ? Math.max(1, Math.ceil(players.length / importancePageSize))
-    : 1;
+  const pageCount = Math.max(1, Math.ceil(players.length / importancePageSize));
   importancePage = Math.min(importancePage, pageCount - 1);
-  const visiblePlayers = mobileLayout.matches
-    ? players.slice(
-        importancePage * importancePageSize,
-        (importancePage + 1) * importancePageSize,
-      )
-    : players;
+  const visiblePlayers = players.slice(
+    importancePage * importancePageSize,
+    (importancePage + 1) * importancePageSize,
+  );
   playerOwnership.replaceChildren(
     createImportanceHeader(),
     ...visiblePlayers.map(createImportanceRow),

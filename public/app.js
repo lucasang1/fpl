@@ -95,10 +95,16 @@ function saveStandingsSnapshot(data) {
   }
 }
 
+function isRecentStandingsSnapshot(data) {
+  const updatedAtMs = new Date(data?.updatedAt).getTime();
+  return Number.isFinite(updatedAtMs) && Date.now() - updatedAtMs < 30 * 60 * 1000;
+}
+
 function canUseFrozenSnapshot(data) {
   return (
     data?.refreshPolicy?.mode === "frozen"
     && data?.gameweek?.id === data?.currentGameweek?.id
+    && isRecentStandingsSnapshot(data)
   );
 }
 
@@ -1541,6 +1547,7 @@ scheduleStandingsColumnFit();
 const initialStandingsSnapshot = getStandingsSnapshot();
 if (canUseFrozenSnapshot(initialStandingsSnapshot)) {
   renderStandings(initialStandingsSnapshot, { saveSnapshot: false });
+  loadStandings(true, { quiet: true });
 } else {
-  loadStandings();
+  loadStandings(true);
 }

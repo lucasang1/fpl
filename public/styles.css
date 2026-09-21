@@ -1796,6 +1796,7 @@ a:hover { color: var(--muted); }
   .gameweek-stepper button {
     width: 27px;
     height: 27px;
+    color: var(--icon-muted);
   }
 
   .gameweek-stepper svg {

@@ -15,7 +15,7 @@ be replayed without refetching every team.
 - Team detail cards with picks, chips, transfers, captaincy, bench, and point
   breakdowns
 - Duo importance view showing which players matter most to each pairing
-- Light/dark theme toggle with the user's choice saved locally
+- Dark theme, with the light-theme implementation retained for future use
 - Frozen snapshots for completed gameweeks
 
 ## Run Locally

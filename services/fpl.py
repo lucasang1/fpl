@@ -691,6 +691,7 @@ def _format_transfers(
     transfers: Iterable[JsonObject],
     gameweek_id: int,
     players: dict[int, JsonObject],
+    live_points: dict[int, int],
 ) -> list[JsonObject]:
     formatted = []
     for transfer in transfers:
@@ -707,6 +708,8 @@ def _format_transfers(
                 "out": players.get(player_out_id, {}).get(
                     "name", f"Player {player_out_id}"
                 ),
+                "pointsIn": live_points.get(player_in_id, 0),
+                "pointsOut": live_points.get(player_out_id, 0),
                 "time": transfer.get("time"),
             }
         )
@@ -725,12 +728,14 @@ def _format_team_details(
     teams: Iterable[JsonObject],
     fixtures: Iterable[JsonObject],
     live_elements: Iterable[JsonObject],
+    previous_banked_fts: dict[int, int] | None = None,
 ) -> list[JsonObject]:
     standings = list(standings)
     if not standings:
         return []
 
-    players, player_context, _ = _build_player_context(
+    previous_banked_fts = previous_banked_fts or {}
+    players, player_context, live_points = _build_player_context(
         elements, teams, fixtures, live_elements
     )
     team_exposure: dict[int, dict[int, int]] = {}
@@ -762,6 +767,8 @@ def _format_team_details(
         event_data = entry_event_data.get(entry_id, {})
         entry_history = event_data.get("entry_history", {})
         event_picks = event_data.get("picks", [])
+        chip = CHIP_LABELS.get(event_data.get("active_chip"))
+        transfers_made = entry_history.get("event_transfers", 0)
         comparison = [
             comparison_team
             for comparison_team in comparison_limit
@@ -824,12 +831,21 @@ def _format_team_details(
                 "manager": team["manager"],
                 "gameweekPoints": team["gameweekPoints"],
                 "totalPoints": team["totalPoints"],
-                "transfersMade": entry_history.get("event_transfers", 0),
+                "transfersMade": transfers_made,
+                "bankedFTs": _calculate_banked_fts(
+                    previous_banked_fts.get(entry_id, 0),
+                    transfers_made,
+                    chip,
+                    gameweek_id,
+                ),
                 "transferCost": entry_history.get("event_transfers_cost", 0),
                 "transfers": _format_transfers(
-                    transfer_data.get(entry_id, []), gameweek_id, players
+                    transfer_data.get(entry_id, []),
+                    gameweek_id,
+                    players,
+                    live_points,
                 ),
-                "chip": CHIP_LABELS.get(event_data.get("active_chip")),
+                "chip": chip,
                 "chipsPlayed": chip_history.get(entry_id, []),
                 "teamValue": _format_team_value(entry_history.get("value")),
                 "bank": _format_bank(entry_history, event_picks),
@@ -838,6 +854,21 @@ def _format_team_details(
         )
 
     return team_details
+
+
+def _calculate_banked_fts(
+    previous_banked_fts: int,
+    transfers_made: int,
+    chip: str | None,
+    gameweek_id: int,
+) -> int:
+    if gameweek_id <= 1:
+        return 0
+
+    available = min(5, max(0, previous_banked_fts) + 1)
+    if chip in {"WC", "FH"}:
+        return available
+    return max(0, available - max(0, transfers_made))
 
 
 def _apply_gameweek_status_counts(
@@ -1085,6 +1116,81 @@ def _read_gameweek_snapshot(snapshot_dir: Path, gameweek_id: int) -> JsonObject 
     return data
 
 
+def _snapshot_banked_fts(snapshot: JsonObject) -> dict[int, int] | None:
+    details = snapshot.get("teamDetails")
+    if not isinstance(details, list):
+        return None
+
+    banked_fts: dict[int, int] = {}
+    for detail in details:
+        entry_id = detail.get("id")
+        value = detail.get("bankedFTs")
+        if not isinstance(entry_id, int) or not isinstance(value, int):
+            return None
+        banked_fts[entry_id] = value
+    return banked_fts
+
+
+def _previous_banked_fts(
+    snapshot_dir: Path | None, gameweek_id: int
+) -> dict[int, int]:
+    if snapshot_dir is None or gameweek_id <= 1:
+        return {}
+
+    previous_snapshot = _read_gameweek_snapshot(snapshot_dir, gameweek_id - 1)
+    if previous_snapshot is None:
+        return {}
+
+    stored = _snapshot_banked_fts(previous_snapshot)
+    if stored is not None:
+        return stored
+
+    balances: dict[int, int] = {}
+    for event in range(1, gameweek_id):
+        snapshot = _read_gameweek_snapshot(snapshot_dir, event)
+        if snapshot is None:
+            continue
+        for detail in snapshot.get("teamDetails", []):
+            entry_id = detail.get("id")
+            if not isinstance(entry_id, int):
+                continue
+            stored_value = detail.get("bankedFTs")
+            if isinstance(stored_value, int):
+                balances[entry_id] = stored_value
+                continue
+            balances[entry_id] = _calculate_banked_fts(
+                balances.get(entry_id, 0),
+                detail.get("transfersMade", 0),
+                detail.get("chip"),
+                event,
+            )
+    return balances
+
+
+def _with_snapshot_banked_fts(
+    data: JsonObject, snapshot_dir: Path | None
+) -> JsonObject:
+    gameweek_id = data.get("gameweek", {}).get("id")
+    details = data.get("teamDetails")
+    if not isinstance(gameweek_id, int) or not isinstance(details, list):
+        return data
+
+    previous = _previous_banked_fts(snapshot_dir, gameweek_id)
+    for detail in details:
+        if isinstance(detail.get("bankedFTs"), int):
+            continue
+        entry_id = detail.get("id")
+        if not isinstance(entry_id, int):
+            continue
+        detail["bankedFTs"] = _calculate_banked_fts(
+            previous.get(entry_id, 0),
+            detail.get("transfersMade", 0),
+            detail.get("chip"),
+            gameweek_id,
+        )
+    return data
+
+
 def _with_snapshot_chip_history(data: JsonObject, snapshot_dir: Path | None) -> JsonObject:
     if snapshot_dir is None:
         return data
@@ -1247,8 +1353,11 @@ def fetch_standings(
         if snapshot is not None:
             return _with_previous_rank_movements(
                 _with_snapshot_chip_history(
-                    _with_current_gameweek_metadata(
-                        snapshot, current_gameweek, available_gameweeks
+                    _with_snapshot_banked_fts(
+                        _with_current_gameweek_metadata(
+                            snapshot, current_gameweek, available_gameweeks
+                        ),
+                        snapshot_dir,
                     ),
                     snapshot_dir,
                 ),
@@ -1298,6 +1407,7 @@ def fetch_standings(
         bootstrap.get("teams", []),
         fixtures,
         live.get("elements", []),
+        _previous_banked_fts(snapshot_dir, gameweek["id"]),
     )
 
     output = {

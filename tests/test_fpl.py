@@ -7,6 +7,7 @@ from pathlib import Path
 from services.fpl import (
     _apply_gameweek_status_counts,
     _apply_rank_movements,
+    _calculate_banked_fts,
     _format_duo_importance,
     _format_pairs,
     _format_player_ownership,
@@ -15,11 +16,54 @@ from services.fpl import (
     _format_team_details,
     _fetch_chip_history,
     _fetch_chips,
+    _previous_banked_fts,
     _refresh_policy,
     _select_gameweek,
     fetch_standings,
     update_standings,
 )
+
+
+class BankedFreeTransfersTests(unittest.TestCase):
+    def test_carries_balance_forward_without_carrying_a_transfer_deficit(self):
+        after_hit = _calculate_banked_fts(0, 2, None, 2)
+        self.assertEqual(after_hit, 0)
+        self.assertEqual(_calculate_banked_fts(after_hit, 0, None, 3), 1)
+
+    def test_wildcard_and_free_hit_preserve_the_weekly_transfer(self):
+        self.assertEqual(_calculate_banked_fts(2, 12, "WC", 4), 3)
+        self.assertEqual(_calculate_banked_fts(4, 8, "FH", 5), 5)
+
+    def test_starts_at_zero_and_caps_the_balance_at_five(self):
+        self.assertEqual(_calculate_banked_fts(4, 0, None, 1), 0)
+        self.assertEqual(_calculate_banked_fts(5, 0, None, 6), 5)
+
+    def test_reconstructs_legacy_snapshots_then_uses_the_previous_balance(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            snapshot_dir = Path(temporary_directory)
+            snapshots = [
+                {"gameweek": {"id": 1}, "teamDetails": [
+                    {"id": 10, "transfersMade": 0, "chip": None}
+                ]},
+                {"gameweek": {"id": 2}, "teamDetails": [
+                    {"id": 10, "transfersMade": 1, "chip": None}
+                ]},
+                {"gameweek": {"id": 3}, "teamDetails": [
+                    {"id": 10, "transfersMade": 9, "chip": "FH"}
+                ]},
+            ]
+            for event, snapshot in enumerate(snapshots, start=1):
+                (snapshot_dir / f"gw-{event}.json").write_text(
+                    json.dumps(snapshot), encoding="utf-8"
+                )
+
+            self.assertEqual(_previous_banked_fts(snapshot_dir, 4), {10: 1})
+
+            snapshots[2]["teamDetails"][0]["bankedFTs"] = 4
+            (snapshot_dir / "gw-3.json").write_text(
+                json.dumps(snapshots[2]), encoding="utf-8"
+            )
+            self.assertEqual(_previous_banked_fts(snapshot_dir, 4), {10: 4})
 
 
 class FormatPointDetailsTests(unittest.TestCase):
@@ -779,8 +823,20 @@ class FormatTeamDetailsTests(unittest.TestCase):
         self.assertEqual(
             details[0]["transfers"],
             [
-                {"in": "Saka", "out": "Palmer", "time": "2024-08-17T11:00:00Z"},
-                {"in": "Watkins", "out": "Haaland", "time": "2024-08-17T12:00:00Z"},
+                {
+                    "in": "Saka",
+                    "out": "Palmer",
+                    "pointsIn": 5,
+                    "pointsOut": 0,
+                    "time": "2024-08-17T11:00:00Z",
+                },
+                {
+                    "in": "Watkins",
+                    "out": "Haaland",
+                    "pointsIn": 4,
+                    "pointsOut": 0,
+                    "time": "2024-08-17T12:00:00Z",
+                },
             ],
         )
         self.assertEqual(details[0]["chip"], "WC")
@@ -1097,6 +1153,7 @@ class UpdateStandingsTests(unittest.TestCase):
                     "id": 10,
                     "team": "Saved team",
                     "chip": "BB",
+                    "bankedFTs": 0,
                     "chipsPlayed": [{"event": 1, "chip": "BB"}],
                 }
             ],

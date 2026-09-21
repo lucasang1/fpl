@@ -6,13 +6,14 @@ const status = document.querySelector("#status");
 const refreshButton = document.querySelector("#refresh");
 const refreshIcon = refreshButton?.querySelector(".refresh-icon");
 const lastUpdated = document.querySelector("#last-updated");
-const gameweekPreviousButton = document.querySelector("#gameweek-previous");
-const gameweekNextButton = document.querySelector("#gameweek-next");
-const gameweekValue = document.querySelector("#gameweek-value");
+const gameweekPreviousButtons = [...document.querySelectorAll("[data-gameweek-previous]")];
+const gameweekNextButtons = [...document.querySelectorAll("[data-gameweek-next]")];
+const gameweekValues = [...document.querySelectorAll("[data-gameweek-value]")];
 const pairsViewButton = document.querySelector("#pairs-view");
 const teamsViewButton = document.querySelector("#teams-view");
 const standingsCard = document.querySelector(".table-wrap");
 const chipsList = document.querySelector("#chips-list");
+const transfersList = document.querySelector("#transfers-list");
 const teamDetail = document.querySelector("#team-detail");
 const teamSummaryPanel = document.querySelector("#team-summary-panel");
 const ownershipPanel = document.querySelector(".ownership-panel");
@@ -29,9 +30,8 @@ const importanceDialogBody = document.querySelector("#importance-dialog-body");
 const importanceDialogClose = document.querySelector("#importance-dialog-close");
 const themeToggle = document.querySelector("#theme-toggle");
 const mobileTabButtons = [...document.querySelectorAll(".mobile-tab")];
-const transferDialog = document.createElement("div");
-const transferDialogBody = document.createElement("div");
 let standingsData;
+let currentGameweekData;
 let activeView = "pairs";
 let activeTeamId;
 let activeDuoImportanceName = "";
@@ -41,7 +41,6 @@ let liveOnlyImportanceManuallySet = false;
 let updatedAt;
 let activeImportanceAnchor;
 let activeImportanceMode = "modal";
-let activeTransferAnchor;
 let importancePage = 0;
 const importancePageSize = 14;
 let standingsRefreshTimer;
@@ -52,7 +51,6 @@ let availableGameweeks = [];
 let headerBaseFontSizes = [];
 let headerScaleFrame;
 let teamColumnFitFrame;
-let transferCloseTimer;
 const desktopLayout = window.matchMedia("(min-width: 901px)");
 const mobileLayout = window.matchMedia("(max-width: 700px)");
 const hoverLayout = window.matchMedia("(hover: hover) and (pointer: fine)");
@@ -61,17 +59,8 @@ const lastViewedTeamKey = "fpl:lastViewedTeamId";
 const themeStorageKey = "fpl:theme";
 const standingsStorageKey = "fpl:standingsSnapshot:v2";
 const themeTransitionDuration = 1120;
-let teamStatsFitFrame;
 let themeTransitionTimer;
 let activeMobileTab = "league";
-
-transferDialog.id = "transfer-dialog";
-transferDialog.className = "importance-dialog transfer-dialog";
-transferDialog.hidden = true;
-transferDialog.setAttribute("role", "tooltip");
-transferDialogBody.className = "importance-dialog-body";
-transferDialog.append(transferDialogBody);
-document.body.append(transferDialog);
 
 function getStoredTheme() {
   try {
@@ -164,7 +153,7 @@ function toggleTheme() {
   setTheme(currentTheme === "dark" ? "light" : "dark");
 }
 
-applyTheme(getStoredTheme() || getPreferredTheme());
+applyTheme("dark");
 
 function measureHeaderFontSizes() {
   if (!topBar) return;
@@ -309,49 +298,6 @@ function pluralize(singular, count, plural = `${singular}s`) {
   return count === 1 ? singular : plural;
 }
 
-function teamStatsFit(stats) {
-  const statsRect = stats.getBoundingClientRect();
-  const statRects = Array.from(stats.children)
-    .filter((stat) => stat.getClientRects().length > 0)
-    .map((stat) => stat.getBoundingClientRect());
-  if (!statRects.length || !statsRect.width) return true;
-
-  const left = Math.min(...statRects.map((rect) => rect.left));
-  const right = Math.max(...statRects.map((rect) => rect.right));
-  return left >= statsRect.left - 0.5 && right <= statsRect.right + 0.5;
-}
-
-function maximizeTeamStatsFont(stats) {
-  const minimumFontSize = 1;
-  const maximumFontSize = parseFloat(getComputedStyle(stats.firstElementChild).fontSize);
-  let low = minimumFontSize;
-  let high = maximumFontSize;
-
-  stats.style.setProperty("--team-detail-stats-font-size", `${minimumFontSize}px`);
-
-  for (let iteration = 0; iteration < 8; iteration += 1) {
-    const candidate = (low + high) / 2;
-    stats.style.setProperty("--team-detail-stats-font-size", `${candidate}px`);
-    if (teamStatsFit(stats)) low = candidate;
-    else high = candidate;
-  }
-
-  stats.style.setProperty("--team-detail-stats-font-size", `${low}px`);
-}
-
-function fitTeamDetailStats() {
-  const stats = teamDetail?.querySelector(".team-detail-stats");
-  if (!stats) return;
-
-  stats.style.removeProperty("--team-detail-stats-font-size");
-  maximizeTeamStatsFont(stats);
-}
-
-function scheduleTeamStatsFit() {
-  cancelAnimationFrame(teamStatsFitFrame);
-  teamStatsFitFrame = requestAnimationFrame(fitTeamDetailStats);
-}
-
 function getSavedTeamId() {
   try {
     const value = localStorage.getItem(lastViewedTeamKey);
@@ -402,7 +348,7 @@ function renderLastUpdated() {
 }
 
 function getStandingsPollMs() {
-  const pollMs = standingsData?.refreshPolicy?.pollMs;
+  const pollMs = (currentGameweekData || standingsData)?.refreshPolicy?.pollMs;
   return Number.isFinite(pollMs) && pollMs > 0 ? pollMs : undefined;
 }
 
@@ -434,19 +380,18 @@ function updateGameweekControls() {
     (gameweek) => gameweek.id === selectedGameweekId,
   );
 
-  if (gameweekValue) {
-    gameweekValue.textContent = Number.isFinite(selectedGameweekId)
-      ? String(selectedGameweekId)
-      : "—";
-  }
-  if (gameweekPreviousButton) {
-    gameweekPreviousButton.disabled = isLoadingStandings || selectedIndex <= 0;
-  }
-  if (gameweekNextButton) {
-    gameweekNextButton.disabled = isLoadingStandings
+  gameweekValues.forEach((input) => {
+    input.value = Number.isFinite(selectedGameweekId) ? String(selectedGameweekId) : "";
+    input.disabled = isLoadingStandings || !availableGameweeks.length;
+  });
+  gameweekPreviousButtons.forEach((button) => {
+    button.disabled = isLoadingStandings || selectedIndex <= 0;
+  });
+  gameweekNextButtons.forEach((button) => {
+    button.disabled = isLoadingStandings
       || selectedIndex < 0
       || selectedIndex >= availableGameweeks.length - 1;
-  }
+  });
 }
 
 function renderGameweekControls(data) {
@@ -465,6 +410,19 @@ function stepGameweek(offset) {
   );
   const gameweek = availableGameweeks[selectedIndex + offset];
   if (!gameweek || isLoadingStandings) return;
+
+  selectedGameweekId = gameweek.id;
+  updateGameweekControls();
+  loadStandings(false);
+}
+
+function selectGameweek(input) {
+  const gameweekId = Number(input.value);
+  const gameweek = availableGameweeks.find((item) => item.id === gameweekId);
+  if (!gameweek || isLoadingStandings || gameweek.id === selectedGameweekId) {
+    updateGameweekControls();
+    return;
+  }
 
   selectedGameweekId = gameweek.id;
   updateGameweekControls();
@@ -809,22 +767,11 @@ function formatChipName(chip) {
 
 const availableChips = ["BB", "FH", "TC", "WC"];
 
-function createChipsHeader() {
-  const row = document.createElement("div");
-  row.className = "chips-row chips-header";
-  for (const label of ["Team", "Chips"]) {
-    const cell = document.createElement("span");
-    cell.textContent = label;
-    row.append(cell);
-  }
-  return row;
-}
-
-function createChipsRow(team, { showTeamName = true } = {}) {
+function createChipsRow(team, { showTeamName = true, data = standingsData } = {}) {
   const row = document.createElement("div");
   const name = document.createElement("span");
   const chips = document.createElement("span");
-  const detail = (standingsData?.teamDetails || []).find((item) => item.id === team.id);
+  const detail = (data?.teamDetails || []).find((item) => item.id === team.id);
   const chipHistory = Array.isArray(detail?.chipsPlayed)
     ? detail.chipsPlayed
     : (detail?.chip ? [{ chip: detail.chip }] : []);
@@ -839,7 +786,7 @@ function createChipsRow(team, { showTeamName = true } = {}) {
     const chip = document.createElement("span");
     const hasPlayed = playedChips.has(chipName);
     const isActive = detail?.chip === chipName
-      && standingsData?.gameweek?.id === standingsData?.currentGameweek?.id;
+      && data?.gameweek?.id === data?.currentGameweek?.id;
     const stateClass = isActive
       ? " chips-pill-active"
       : (hasPlayed ? " chips-pill-played" : "");
@@ -859,13 +806,13 @@ function createChipsRow(team, { showTeamName = true } = {}) {
   return row;
 }
 
-function getTeamsInDuoLeagueOrder() {
-  const standings = standingsData?.standings || [];
+function getTeamsInDuoLeagueOrder(data = standingsData) {
+  const standings = data?.standings || [];
   const teamsById = new Map(standings.map((team) => [team.id, team]));
   const orderedTeams = [];
   const addedTeamIds = new Set();
 
-  for (const pair of standingsData?.pairs || []) {
+  for (const pair of data?.pairs || []) {
     for (const member of getPairMembersInPointsOrder(pair)) {
       if (addedTeamIds.has(member.id)) continue;
 
@@ -885,10 +832,95 @@ function getTeamsInDuoLeagueOrder() {
 }
 
 function renderChips() {
-  if (!chipsList || !standingsData) return;
+  const data = currentGameweekData || standingsData;
+  if (!chipsList || !data) return;
   chipsList.replaceChildren(
-    createChipsHeader(),
-    ...getTeamsInDuoLeagueOrder().map(createChipsRow),
+    ...getTeamsInDuoLeagueOrder(data).map((team) => createChipsRow(team, { data })),
+  );
+}
+
+function createTransfersHeader() {
+  const row = document.createElement("div");
+  const labels = [
+    ["Team"],
+    ["Xfers", "Made"],
+    ["FTs", "Left"],
+    ["Net", "Diff"],
+    ["Details"],
+  ];
+
+  row.className = "chips-row stats-transfers-row stats-transfers-header";
+  for (const lines of labels) {
+    const cell = document.createElement("span");
+    lines.forEach((line, index) => {
+      if (index) cell.append(document.createElement("br"));
+      cell.append(line);
+    });
+    row.append(cell);
+  }
+  return row;
+}
+
+function formatNetDiff(transfers) {
+  if (!transfers.length) return "0";
+  if (transfers.some((transfer) => (
+    !Number.isFinite(transfer.pointsIn) || !Number.isFinite(transfer.pointsOut)
+  ))) return "—";
+
+  const net = transfers.reduce(
+    (total, transfer) => total + transfer.pointsIn - transfer.pointsOut,
+    0,
+  );
+  return `${net > 0 ? "+" : ""}${net}`;
+}
+
+function createTransfersRow(team, data = standingsData) {
+  const row = document.createElement("div");
+  const name = document.createElement("span");
+  const made = document.createElement("span");
+  const banked = document.createElement("span");
+  const net = document.createElement("span");
+  const details = document.createElement("span");
+  const detail = (data?.teamDetails || []).find((item) => item.id === team.id);
+  const transfers = detail?.transfers || [];
+  const chipLabel = detail?.chip === "WC"
+    ? "Wildcard"
+    : detail?.chip === "FH" ? "Free Hit" : undefined;
+
+  row.className = "chips-row stats-transfers-row";
+  name.className = "chips-team-name";
+  name.textContent = team.team;
+  made.className = "stats-transfer-number";
+  made.textContent = chipLabel ? "—" : formatStatValue(detail?.transfersMade ?? 0);
+  banked.className = "stats-transfer-number";
+  banked.textContent = formatStatValue(detail?.bankedFTs ?? "—");
+  net.className = "stats-transfer-number";
+  net.textContent = chipLabel ? "—" : formatNetDiff(transfers);
+  details.className = "stats-transfer-value";
+  if (chipLabel) {
+    details.textContent = chipLabel;
+  } else if (transfers.length) {
+    details.replaceChildren(...transfers.map((transfer) => {
+      const line = document.createElement("span");
+      const pointsOut = Number.isFinite(transfer.pointsOut) ? ` (${transfer.pointsOut})` : "";
+      const pointsIn = Number.isFinite(transfer.pointsIn) ? ` (${transfer.pointsIn})` : "";
+      line.className = "stats-transfer-line";
+      line.textContent = `${transfer.out}${pointsOut} → ${transfer.in}${pointsIn}`;
+      return line;
+    }));
+  } else {
+    details.textContent = "—";
+  }
+  row.append(name, made, banked, net, details);
+  return row;
+}
+
+function renderTransfers() {
+  const data = currentGameweekData || standingsData;
+  if (!transfersList || !data) return;
+  transfersList.replaceChildren(
+    createTransfersHeader(),
+    ...getTeamsInDuoLeagueOrder(data).map((team) => createTransfersRow(team, data)),
   );
 }
 
@@ -1193,38 +1225,6 @@ function createTeamPlayerRow(player, chip) {
   return row;
 }
 
-function createTeamStat(label, value) {
-  const stat = document.createElement("div");
-  const statLabel = document.createElement("span");
-  const statValue = document.createElement("strong");
-
-  stat.className = "team-detail-stat";
-  statLabel.textContent = label;
-  statValue.textContent = formatStatValue(value);
-  stat.append(statLabel, statValue);
-  return stat;
-}
-
-function createTransferStat(detail) {
-  const stat = createTeamStat(
-    "Transfers",
-    formatTransfers(detail.transfersMade, detail.transferCost),
-  );
-  return createHoverStat(stat, () => createTransferList(detail));
-}
-
-function createChipStat(detail) {
-  const stat = createTeamStat("Chip", formatChipName(detail.chip));
-  stat.classList.add("team-detail-chip-stat");
-  return createHoverStat(stat, () => createChipDetails(detail));
-}
-
-function createValueStat(detail) {
-  const stat = createTeamStat("Total Value", formatTeamValue(detail.teamValue));
-  stat.classList.add("team-detail-value-stat");
-  return createHoverStat(stat, () => createValueDetails(detail));
-}
-
 function createTeamValueSummary(detail) {
   const values = document.createElement("div");
   values.className = "team-summary-values";
@@ -1237,7 +1237,8 @@ function createTeamValueSummary(detail) {
     ["Squad Value", squadValue, formatTeamValue],
     ["Bank", detail.bank, formatTeamValue],
     ["Total Value", detail.teamValue, formatTeamValue],
-    ["Total Points", detail.totalPoints, formatStatValue],
+    ["Total Pts", detail.totalPoints, formatStatValue],
+    ["Banked FTs", detail.bankedFTs, formatStatValue],
   ]) {
     const item = document.createElement("div");
     const itemLabel = document.createElement("span");
@@ -1259,33 +1260,6 @@ function renderTeamSummary(detail, standingsTeam) {
     createTeamValueSummary(detail),
     createChipsRow(standingsTeam, { showTeamName: false }),
   );
-}
-
-function createHoverStat(stat, createContent) {
-  const open = () => openTransferDialog(createContent, stat);
-  const close = () => scheduleCloseTransferDialog();
-  const openOnHover = () => {
-    if (hoverLayout.matches) open();
-  };
-  const closeOnHover = () => {
-    if (hoverLayout.matches) close();
-  };
-
-  stat.classList.add("team-hover-stat");
-  stat.tabIndex = 0;
-  stat.setAttribute("aria-describedby", transferDialog.id);
-  stat.addEventListener("mouseenter", openOnHover);
-  stat.addEventListener("focus", openOnHover);
-  stat.addEventListener("mouseleave", closeOnHover);
-  stat.addEventListener("blur", closeOnHover);
-  stat.addEventListener("click", () => {
-    if (activeTransferAnchor === stat && !transferDialog.hidden) {
-      closeTransferDialog();
-    } else {
-      open();
-    }
-  });
-  return stat;
 }
 
 function createGameweekScore(points) {
@@ -1341,110 +1315,6 @@ function findStandingsTeam(teamId) {
   return (standingsData?.standings || []).find((team) => team.id === teamId);
 }
 
-function formatTransfers(transfersMade, transferCost) {
-  const transfers = formatStatValue(transfersMade);
-  return transferCost > 0 ? `${transfers} (-${transferCost})` : transfers;
-}
-
-function createTransferList(detail) {
-  const section = document.createElement("section");
-  const transfers = detail.transfers || [];
-
-  if (!transfers.length) {
-    const empty = document.createElement("p");
-    empty.textContent = detail.transfersMade > 0
-      ? "Transfer details unavailable"
-      : "No transfers made";
-    section.append(empty);
-    return section;
-  }
-
-  const list = document.createElement("ul");
-  for (const transfer of transfers) {
-    const item = document.createElement("li");
-    item.textContent = `${transfer.out} -> ${transfer.in}`;
-    list.append(item);
-  }
-  section.append(list);
-  return section;
-}
-
-function createChipDetails(detail) {
-  const section = document.createElement("section");
-  const chipsPlayed = Array.isArray(detail.chipsPlayed)
-    ? detail.chipsPlayed
-    : (detail.chip ? [{ chip: detail.chip }] : []);
-
-  if (!chipsPlayed.length) {
-    const empty = document.createElement("p");
-    empty.textContent = "Chips played: -";
-    section.append(empty);
-    return section;
-  }
-
-  const list = document.createElement("ul");
-  for (const played of chipsPlayed) {
-    const item = document.createElement("li");
-    const gameweek = Number.isFinite(played.event) ? `GW${played.event} ` : "";
-    item.textContent = `${gameweek}${formatChipName(played.chip)}`;
-    list.append(item);
-  }
-  section.append(list);
-  return section;
-}
-
-function createValueDetails(detail) {
-  const section = document.createElement("section");
-  const team = document.createElement("p");
-  const bank = document.createElement("p");
-  team.textContent = `Team: ${formatTeamValue(detail.teamValue - detail.bank)}`;
-  bank.textContent = `Bank: ${formatTeamValue(detail.bank)}`;
-  section.append(team, bank);
-  return section;
-}
-
-function positionTransferDialog(anchor) {
-  if (transferDialog.hidden || !anchor) return;
-
-  const spacing = 8;
-  const viewportPadding = 12;
-  const anchorRect = anchor.getBoundingClientRect();
-  const dialogWidth = transferDialog.offsetWidth;
-  const dialogHeight = transferDialog.offsetHeight;
-  const maxLeft = window.innerWidth - dialogWidth - viewportPadding;
-  const belowTop = anchorRect.bottom + spacing;
-  const aboveTop = anchorRect.top - dialogHeight - spacing;
-  const left = Math.max(
-    viewportPadding,
-    Math.min(anchorRect.left + (anchorRect.width - dialogWidth) / 2, maxLeft),
-  );
-  const top = belowTop + dialogHeight <= window.innerHeight - viewportPadding
-    ? belowTop
-    : Math.max(viewportPadding, aboveTop);
-
-  transferDialog.style.left = `${left}px`;
-  transferDialog.style.top = `${top}px`;
-}
-
-function openTransferDialog(createContent, anchor) {
-  clearTimeout(transferCloseTimer);
-  activeTransferAnchor = anchor;
-  transferDialogBody.replaceChildren(createContent());
-  transferDialog.hidden = false;
-  positionTransferDialog(anchor);
-}
-
-function scheduleCloseTransferDialog() {
-  clearTimeout(transferCloseTimer);
-  transferCloseTimer = setTimeout(closeTransferDialog, 120);
-}
-
-function closeTransferDialog() {
-  clearTimeout(transferCloseTimer);
-  transferDialog.hidden = true;
-  activeTransferAnchor = undefined;
-}
-
 function renderTeamDetail() {
   if (!teamDetail || activeTeamId === undefined) return;
 
@@ -1454,7 +1324,6 @@ function renderTeamDetail() {
   const detail = findTeamDetail(activeTeamId);
   const standingsTeam = findStandingsTeam(activeTeamId);
   if (!detail || !standingsTeam) {
-    closeTransferDialog();
     teamDetail.replaceChildren();
     if (teamSummaryPanel) {
       teamSummaryPanel.hidden = true;
@@ -1463,15 +1332,11 @@ function renderTeamDetail() {
     return;
   }
 
-  closeTransferDialog();
-
   const header = document.createElement("div");
   const titleGroup = document.createElement("div");
   const titleText = document.createElement("div");
   const teamName = createTeamDetailTeamSelect(detail);
   const gameweekScore = createGameweekScore(detail.gameweekPoints);
-  const stats = document.createElement("div");
-  const totalPointsStat = createTeamStat("Total Points", detail.totalPoints);
   const players = document.createElement("div");
 
   header.className = "team-detail-header";
@@ -1479,16 +1344,7 @@ function renderTeamDetail() {
   titleGroup.className = "team-detail-title";
   titleText.className = "team-detail-title-text";
 
-  stats.className = "team-detail-stats";
-  totalPointsStat.classList.add("team-detail-total-points-stat");
-  stats.append(
-    totalPointsStat,
-    createTransferStat(detail),
-    createChipStat(detail),
-    createValueStat(detail),
-  );
-
-  titleText.append(teamName, stats);
+  titleText.append(teamName);
   titleGroup.append(createTeamCardImage(standingsTeam), titleText);
 
   header.append(titleGroup, gameweekScore);
@@ -1501,7 +1357,6 @@ function renderTeamDetail() {
 
   teamDetail.replaceChildren(header, players);
   renderTeamSummary(detail, standingsTeam);
-  scheduleTeamStatsFit();
   syncOwnershipHeight();
 }
 
@@ -1510,7 +1365,6 @@ function openTeamDetail(teamId, { scroll = true } = {}) {
   saveTeamId(teamId);
   if (mobileLayout.matches) setMobileTab("team", { scroll: false });
   closeImportanceDialog();
-  closeTransferDialog();
   renderActiveView();
   renderOwnership();
   if (scroll) {
@@ -1525,7 +1379,7 @@ function openTeamDetail(teamId, { scroll = true } = {}) {
 }
 
 function setMobileTab(tab, { scroll = true } = {}) {
-  if (!["league", "team", "importance", "transfers"].includes(tab)) return;
+  if (!["league", "team", "importance", "stats"].includes(tab)) return;
   activeMobileTab = tab;
   main.dataset.mobileTab = tab;
   mobileTabButtons.forEach((button) => {
@@ -1538,10 +1392,8 @@ function setMobileTab(tab, { scroll = true } = {}) {
     }
   });
   closeImportanceDialog();
-  closeTransferDialog();
   if (scroll && mobileLayout.matches) window.scrollTo({ top: 0, behavior: "smooth" });
   requestAnimationFrame(() => {
-    scheduleTeamStatsFit();
     scheduleStandingsColumnFit();
     syncOwnershipHeight();
   });
@@ -1570,9 +1422,10 @@ function renderActiveView() {
 }
 
 function renderOwnership() {
-  if (!standingsData) return;
+  const data = currentGameweekData || standingsData;
+  if (!data) return;
   closeImportanceDialog();
-  const duoImportance = standingsData.duoImportance || [];
+  const duoImportance = data.duoImportance || [];
   if (!duoImportance.length) {
     duoImportanceSelect.replaceChildren();
     playerOwnership.replaceChildren();
@@ -1598,7 +1451,7 @@ function renderOwnership() {
 
   const livePlayerCount = selectedDuo.players.filter((player) => player.isLive).length;
   const hasLivePlayers = livePlayerCount > 0;
-  const liveOnlyContext = `${standingsData.gameweek?.id ?? ""}:${selectedDuo.name}`;
+  const liveOnlyContext = `${data.gameweek?.id ?? ""}:${selectedDuo.name}`;
   if (liveOnlyImportanceContext !== liveOnlyContext) {
     liveOnlyImportanceContext = liveOnlyContext;
     liveOnlyImportanceManuallySet = false;
@@ -1667,6 +1520,7 @@ function createTeamPlayerHeader() {
 function renderStandings(data, { saveSnapshot = true, animateRefresh = false } = {}) {
   if (animateRefresh) animateRefreshIcon();
   standingsData = data;
+  if (data.gameweek?.id === data.currentGameweek?.id) currentGameweekData = data;
   leagueName.textContent = data.league.name;
   status.textContent = data.gameweek.name;
   updatedAt = new Date(data.updatedAt);
@@ -1676,6 +1530,7 @@ function renderStandings(data, { saveSnapshot = true, animateRefresh = false } =
   renderLastUpdated();
   renderActiveView();
   renderOwnership();
+  renderTransfers();
   renderChips();
   scheduleStandingsRefresh();
 }
@@ -1697,9 +1552,30 @@ async function loadStandings(force = false, { quiet = false } = {}) {
     if (force) params.set("refresh", "1");
     if (selectedGameweekId) params.set("event", String(selectedGameweekId));
     const url = params.toString() ? `/api/standings?${params}` : "/api/standings";
-    const response = await fetch(url, { cache: "no-store" });
+    const responsePromise = fetch(url, { cache: "no-store" });
+    const currentParams = new URLSearchParams();
+    if (force) currentParams.set("refresh", "1");
+    const currentUrl = currentParams.toString()
+      ? `/api/standings?${currentParams}`
+      : "/api/standings";
+    const currentResponsePromise = selectedGameweekId
+      && standingsData?.currentGameweek?.id
+      && selectedGameweekId !== standingsData.currentGameweek.id
+      ? fetch(currentUrl, { cache: "no-store" })
+      : undefined;
+    const [response, currentResponse] = await Promise.all([
+      responsePromise,
+      currentResponsePromise,
+    ]);
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Standings are unavailable");
+    if (currentResponse) {
+      const currentData = await currentResponse.json();
+      if (!currentResponse.ok) {
+        throw new Error(currentData.error || "Current gameweek stats are unavailable");
+      }
+      currentGameweekData = currentData;
+    }
     lastFetchAt = Date.now();
     renderStandings(data, { animateRefresh: quiet && !force });
   } catch (error) {
@@ -1723,17 +1599,27 @@ async function loadStandings(force = false, { quiet = false } = {}) {
 }
 
 refreshButton.addEventListener("click", () => loadStandings(true));
-gameweekPreviousButton?.addEventListener("click", () => stepGameweek(-1));
-gameweekNextButton?.addEventListener("click", () => stepGameweek(1));
+gameweekPreviousButtons.forEach((button) => {
+  button.addEventListener("click", () => stepGameweek(-1));
+});
+gameweekNextButtons.forEach((button) => {
+  button.addEventListener("click", () => stepGameweek(1));
+});
+gameweekValues.forEach((input) => {
+  input.addEventListener("focus", () => input.select());
+  input.addEventListener("change", () => selectGameweek(input));
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    selectGameweek(input);
+    input.blur();
+  });
+});
 document.addEventListener("visibilitychange", refreshStandingsAfterResume);
 window.addEventListener("pageshow", refreshStandingsAfterResume);
 window.addEventListener("focus", refreshStandingsAfterResume);
-themeToggle?.addEventListener("click", toggleTheme);
 mobileTabButtons.forEach((button) => {
   button.addEventListener("click", () => setMobileTab(button.dataset.mobileTab));
-});
-preferredDarkTheme.addEventListener("change", () => {
-  if (!getStoredTheme()) applyTheme(getPreferredTheme(), true);
 });
 pairsViewButton.addEventListener("click", () => {
   activeView = "pairs";
@@ -1780,20 +1666,15 @@ document.addEventListener("click", (event) => {
 importanceDialog.addEventListener("close", () => {
   activeImportanceAnchor = undefined;
 });
-transferDialog.addEventListener("mouseenter", () => clearTimeout(transferCloseTimer));
-transferDialog.addEventListener("mouseleave", scheduleCloseTransferDialog);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeImportanceDialog();
-  if (event.key === "Escape") closeTransferDialog();
 });
 window.addEventListener("scroll", () => {
   scheduleHeaderFontScale();
   positionImportanceDialog(activeImportanceAnchor);
-  positionTransferDialog(activeTransferAnchor);
 }, { passive: true });
 window.addEventListener("resize", () => {
   positionImportanceDialog(activeImportanceAnchor);
-  positionTransferDialog(activeTransferAnchor);
   scheduleStandingsColumnFit();
   resetHeaderFontScale();
 });
@@ -1815,12 +1696,10 @@ if (standingsCard) {
 }
 if (teamDetail) {
   new ResizeObserver(() => {
-    scheduleTeamStatsFit();
     syncOwnershipHeight();
   }).observe(teamDetail);
 }
 document.fonts?.ready.then(() => {
-  scheduleTeamStatsFit();
   scheduleStandingsColumnFit();
   resetHeaderFontScale();
 });

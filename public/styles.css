@@ -1,4 +1,5 @@
 :root {
+  --control-row-height: 68px;
   color-scheme: light;
   --bg: #f5f5f5;
   --bg-translucent: rgb(245 245 245 / 95%);
@@ -104,10 +105,6 @@ main {
 }
 
 @media (min-width: 901px) {
-  :root {
-    --control-row-height: 68px;
-  }
-
   main {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
@@ -120,6 +117,10 @@ main {
   }
 
   main > .table-wrap {
+    grid-column: 1 / -1;
+  }
+
+  main > .standings-gameweek {
     grid-column: 1 / -1;
   }
 
@@ -146,17 +147,13 @@ main {
     min-height: var(--control-row-height);
     margin-bottom: 0;
     padding: 12px 16px;
-    /*border-bottom: 1px solid var(--border);*/
+    border-bottom: 1px solid var(--border);
     background: var(--surface);
   }
 
   .team-detail > .team-detail-header {
     margin-bottom: 0;
     margin-inline: 0;
-  }
-
-  .team-detail-stats {
-    margin-top: 3px;
   }
 
   .table-toolbar {
@@ -224,6 +221,7 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-height: var(--control-row-height);
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
@@ -381,11 +379,45 @@ button:disabled { cursor: wait; opacity: .65; }
   stroke-linejoin: round;
 }
 
-#gameweek-value {
+.gameweek-value {
+  width: 58px;
   min-width: 58px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  color: inherit;
+  background: transparent;
+  font-family: inherit;
   font-size: .8rem;
   font-weight: 800;
+  line-height: 34px;
   text-align: center;
+}
+
+.gameweek-value:focus-visible {
+  background: var(--surface-muted);
+  box-shadow: inset 0 0 0 2px var(--theme-toggle-ring);
+}
+
+.gameweek-value:disabled {
+  opacity: 1;
+  -webkit-text-fill-color: currentColor;
+}
+
+.standings-gameweek,
+.mobile-team-gameweek {
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.standings-gameweek {
+  display: flex;
+}
+
+.mobile-team-gameweek {
+  display: none;
 }
 
 #refresh {
@@ -775,7 +807,7 @@ a:hover { color: var(--muted); }
   display: flex;
   flex-direction: column;
   overflow-x: auto;
-  padding: 12px 0 8px;
+  padding: 0 0 8px;
   border-radius: 12px;
   background: var(--surface);
   box-shadow: var(--shadow);
@@ -783,6 +815,7 @@ a:hover { color: var(--muted); }
 
 .transfers-panel,
 .chips-panel,
+.stats-panel,
 .team-summary-panel,
 .mobile-tab-bar {
   display: none;
@@ -793,8 +826,10 @@ a:hover { color: var(--muted); }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
-  padding: 0 8px;
+  min-height: var(--control-row-height);
+  margin-bottom: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
 }
 
 .ownership-toolbar h2 {
@@ -1083,7 +1118,7 @@ a:hover { color: var(--muted); }
   position: relative;
   overflow-x: hidden;
   margin-bottom: 0;
-  padding: 12px 0 0;
+  padding: 0;
   border-radius: 12px;
   background: var(--surface);
   box-shadow: var(--shadow);
@@ -1119,11 +1154,6 @@ a:hover { color: var(--muted); }
   height: 1.1rem;
 }
 
-.team-detail-placeholder-stat {
-  width: 70px;
-  height: .75rem;
-}
-
 .team-detail-placeholder-row {
   grid-column: 1 / -1;
   height: 30px;
@@ -1134,9 +1164,9 @@ a:hover { color: var(--muted); }
   grid-template-columns: 42px minmax(0, 1fr) 42px;
   gap: 12px;
   align-items: center;
+  min-height: var(--control-row-height);
   margin-bottom: 0;
-  margin-inline: 8px;
-  padding-bottom: 10px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1257,62 +1287,6 @@ a:hover { color: var(--muted); }
   line-height: 1;
 }
 
-.team-detail-stats {
-  --team-detail-stats-font-size: .75rem;
-
-  display: flex;
-  flex-wrap: nowrap;
-  justify-content: center;
-  gap: 6px 14px;
-  align-items: baseline;
-  width: 100%;
-  max-width: 100%;
-  margin-top: 5px;
-  min-width: 0;
-  overflow-x: hidden;
-}
-
-.team-detail-stat {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 4px;
-  align-items: baseline;
-  min-width: 0;
-  font-size: var(--team-detail-stats-font-size);
-  line-height: 1.25;
-}
-
-.team-detail-stat span {
-  color: var(--muted);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.team-detail-stat strong {
-  overflow: hidden;
-  color: var(--strong);
-  font-size: inherit;
-  line-height: inherit;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.team-hover-stat {
-  cursor: help;
-}
-
-.team-hover-stat:hover strong,
-.team-hover-stat:focus-visible strong {
-  color: var(--muted);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.team-hover-stat:focus-visible {
-  outline: 2px solid var(--strong);
-  outline-offset: 3px;
-}
-
 .team-player-list {
   --ownership-columns: minmax(90px, 1fr) minmax(5ch, max-content) minmax(6ch, max-content) minmax(5ch, max-content);
 }
@@ -1374,25 +1348,6 @@ a:hover { color: var(--muted); }
 
 .importance-dialog-hover .importance-dialog-header {
   display: none;
-}
-
-.transfer-dialog {
-  z-index: 20;
-  width: max-content;
-  max-width: calc(100vw - 24px);
-}
-
-.transfer-dialog[hidden] {
-  display: none;
-}
-
-.transfer-dialog .importance-dialog-body {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-}
-
-.transfer-dialog li {
-  white-space: nowrap;
 }
 
 .importance-dialog-header {
@@ -1520,6 +1475,7 @@ a:hover { color: var(--muted); }
 
 @media (max-width: 700px) {
   :root {
+    --control-row-height: 45px;
     --mobile-tab-bar-height: 50px;
   }
 
@@ -1529,25 +1485,39 @@ a:hover { color: var(--muted); }
 
   main[data-mobile-tab="league"] > .team-detail,
   main[data-mobile-tab="league"] > .ownership-panel,
-  main[data-mobile-tab="league"] > .transfers-panel,
-  main:not([data-mobile-tab="league"]) > .chips-panel,
+  main[data-mobile-tab="league"] > .stats-panel,
   main[data-mobile-tab="team"] > .table-wrap,
   main[data-mobile-tab="team"] > .ownership-panel,
-  main[data-mobile-tab="team"] > .transfers-panel,
+  main[data-mobile-tab="team"] > .stats-panel,
   main[data-mobile-tab="importance"] > .table-wrap,
   main[data-mobile-tab="importance"] > .team-detail,
-  main[data-mobile-tab="importance"] > .transfers-panel,
-  main[data-mobile-tab="transfers"] > .table-wrap,
-  main[data-mobile-tab="transfers"] > .team-detail,
-  main[data-mobile-tab="transfers"] > .ownership-panel {
+  main[data-mobile-tab="importance"] > .stats-panel,
+  main[data-mobile-tab="stats"] > .table-wrap,
+  main[data-mobile-tab="stats"] > .team-detail,
+  main[data-mobile-tab="stats"] > .ownership-panel {
     display: none;
   }
 
-  .chips-panel {
+  main:not([data-mobile-tab="league"]) > .standings-gameweek {
+    display: none;
+  }
+
+  main[data-mobile-tab="team"] > .mobile-team-gameweek {
+    display: flex;
+  }
+
+  .stats-panel {
+    display: flex;
+    min-height: calc(100dvh - 150px);
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .chips-panel,
+  .transfers-panel {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    margin-top: 12px;
     padding: 0;
     border-radius: 12px;
     background: var(--surface);
@@ -1557,6 +1527,18 @@ a:hover { color: var(--muted); }
   .chips-list {
     display: flex;
     flex-direction: column;
+  }
+
+  .stats-card-header {
+    margin: 0;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--strong);
+    background: var(--surface);
+    font-size: .64rem;
+    font-weight: 800;
+    line-height: 1.15;
+    text-align: center;
   }
 
   .chips-row {
@@ -1579,25 +1561,54 @@ a:hover { color: var(--muted); }
     border-bottom: 0;
   }
 
-  .chips-header {
-    display: none;
-    min-height: auto;
-    color: var(--muted);
-    background: var(--table-header-bg);
-    font-size: .5rem;
-    text-transform: uppercase;
-    letter-spacing: .02em;
-  }
-
-  .chips-header span:last-child {
-    text-align: center;
-  }
-
   .chips-team-name {
     overflow: hidden;
     color: var(--strong);
     font-weight: 700;
     text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stats-transfer-value {
+    color: var(--strong);
+    font-size: .56rem;
+    font-weight: 400;
+    text-align: right;
+  }
+
+  .stats-transfers-row {
+    grid-template-columns: minmax(0, .9fr) 42px 42px 38px minmax(108px, 1.4fr);
+    gap: 4px;
+  }
+
+  .stats-transfers-header {
+    min-height: 30px;
+    color: var(--muted);
+    background: var(--table-header-bg);
+    font-size: .48rem;
+    font-weight: 800;
+    line-height: 1.15;
+    text-transform: uppercase;
+    letter-spacing: .015em;
+  }
+
+  .stats-transfers-header span:not(:first-child) {
+    text-align: center;
+  }
+
+  .stats-transfers-header span:last-child {
+    text-align: right;
+  }
+
+  .stats-transfer-number {
+    color: var(--strong);
+    font-size: .58rem;
+    font-weight: 400;
+    text-align: center;
+  }
+
+  .stats-transfer-line {
+    display: block;
     white-space: nowrap;
   }
 
@@ -1649,12 +1660,8 @@ a:hover { color: var(--muted); }
 
   .team-summary-values {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     background: var(--table-row-alt-bg);
-  }
-
-  .team-detail-chip-stat {
-    display: none;
   }
 
   .team-summary-value {
@@ -1683,11 +1690,6 @@ a:hover { color: var(--muted); }
     color: var(--strong);
     font-size: .68rem;
     line-height: 1.2;
-  }
-
-  .transfers-panel {
-    display: block;
-    min-height: calc(100dvh - 150px);
   }
 
   .mobile-tab-bar {
@@ -1761,6 +1763,7 @@ a:hover { color: var(--muted); }
   .top-bar {
     margin: 0 -12px 6px;
     padding: 10px 12px;
+    gap: 4px;
   }
 
   .eyebrow { font-size: .68rem; }
@@ -1777,6 +1780,7 @@ a:hover { color: var(--muted); }
 
   .table-toolbar {
     gap: 8px;
+    height: var(--control-row-height);
     padding: 8px;
   }
 
@@ -1799,9 +1803,12 @@ a:hover { color: var(--muted); }
     height: .8rem;
   }
 
-  #gameweek-value {
+  .gameweek-value {
+    width: 42px;
     min-width: 42px;
+    height: 27px;
     font-size: .58rem;
+    line-height: 27px;
   }
 
   #refresh {
@@ -1938,8 +1945,8 @@ a:hover { color: var(--muted); }
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    margin-top: 12px;
-    padding: 10px 0 8px;
+    margin-top: 0;
+    padding: 0 0 8px;
   }
 
   .ownership-toolbar {
@@ -1947,7 +1954,9 @@ a:hover { color: var(--muted); }
     flex-direction: row;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 8px;
+    height: var(--control-row-height);
+    margin-bottom: 0;
+    padding: 8px;
   }
 
   .ownership-toolbar h2 {
@@ -2008,7 +2017,7 @@ a:hover { color: var(--muted); }
   }
 
   .team-detail {
-    margin-top: 12px;
+    margin-top: 0;
     margin-bottom: 0;
     padding-top: 0;
   }
@@ -2016,7 +2025,8 @@ a:hover { color: var(--muted); }
   .team-detail-header {
     grid-template-columns: 28px minmax(0, 1fr) 28px;
     gap: 8px;
-    padding: 5px 2px 5px;
+    height: var(--control-row-height);
+    padding: 8px;
   }
 
   .team-detail-title {
@@ -2061,20 +2071,6 @@ a:hover { color: var(--muted); }
 
   .team-detail-gw-score strong {
     font-size: .82rem;
-  }
-
-  .team-detail-stats {
-    gap: 3px 8px;
-    margin-top: 3px;
-  }
-
-  .team-detail-stat {
-    gap: 3px;
-  }
-
-  .team-detail-total-points-stat,
-  .team-detail-value-stat {
-    display: none;
   }
 
 

@@ -33,7 +33,7 @@
       "name": "Gameweek 1"
     }
   ],
-  "updatedAt": "2026-09-21T03:46:53.448292+00:00",
+  "updatedAt": "2026-09-21T07:33:24.919308+00:00",
   "teamCardImage": "badge",
   "refreshPolicy": {
     "mode": "frozen",
@@ -11520,11 +11520,14 @@
       "gameweekPoints": 64,
       "totalPoints": 404,
       "transfersMade": 1,
+      "bankedFTs": 1,
       "transferCost": 0,
       "transfers": [
         {
           "in": "Hall",
           "out": "Dedić",
+          "pointsIn": 13,
+          "pointsOut": 0,
           "time": "2026-09-18T09:38:31.465241Z"
         }
       ],
@@ -12461,76 +12464,105 @@
       "gameweekPoints": 65,
       "totalPoints": 388,
       "transfersMade": 0,
+      "bankedFTs": 2,
       "transferCost": 0,
       "transfers": [
         {
           "in": "Pickford",
           "out": "Raya",
+          "pointsIn": 8,
+          "pointsOut": 1,
           "time": "2026-09-12T17:10:05.884568Z"
         },
         {
           "in": "Leno",
           "out": "Kinsky",
+          "pointsIn": 3,
+          "pointsOut": 2,
           "time": "2026-09-12T17:10:05.884802Z"
         },
         {
           "in": "Konsa",
           "out": "van Ewijk",
+          "pointsIn": 1,
+          "pointsOut": 0,
           "time": "2026-09-12T17:10:05.884987Z"
         },
         {
           "in": "Gvardiol",
           "out": "Virgil",
+          "pointsIn": 4,
+          "pointsOut": 8,
           "time": "2026-09-12T17:10:05.885155Z"
         },
         {
           "in": "Hall",
           "out": "Maguire",
+          "pointsIn": 13,
+          "pointsOut": 2,
           "time": "2026-09-12T17:10:05.885323Z"
         },
         {
           "in": "White",
           "out": "Khalaili",
+          "pointsIn": 0,
+          "pointsOut": 6,
           "time": "2026-09-12T17:10:05.885489Z"
         },
         {
           "in": "Gibbs-White",
           "out": "Mbeumo",
+          "pointsIn": 2,
+          "pointsOut": 2,
           "time": "2026-09-12T17:10:05.885647Z"
         },
         {
           "in": "Barnes",
           "out": "Tzolis",
+          "pointsIn": 9,
+          "pointsOut": 2,
           "time": "2026-09-12T17:10:05.885820Z"
         },
         {
           "in": "Wissa",
           "out": "Calvert-Lewin",
+          "pointsIn": 0,
+          "pointsOut": 2,
           "time": "2026-09-12T17:10:05.885986Z"
         },
         {
           "in": "Davis",
           "out": "White",
+          "pointsIn": 2,
+          "pointsOut": 0,
           "time": "2026-09-14T17:56:38.967532Z"
         },
         {
           "in": "Barry",
           "out": "Wissa",
+          "pointsIn": 6,
+          "pointsOut": 0,
           "time": "2026-09-14T20:58:07.245061Z"
         },
         {
           "in": "King",
           "out": "Rogers",
+          "pointsIn": 2,
+          "pointsOut": 2,
           "time": "2026-09-18T17:21:17.818085Z"
         },
         {
           "in": "Enzo",
           "out": "Gakpo",
+          "pointsIn": 7,
+          "pointsOut": 3,
           "time": "2026-09-18T17:21:17.818448Z"
         },
         {
           "in": "Haaland",
           "out": "Isak",
+          "pointsIn": 6,
+          "pointsOut": 8,
           "time": "2026-09-18T17:21:17.818648Z"
         }
       ],
@@ -13431,11 +13463,14 @@
       "gameweekPoints": 38,
       "totalPoints": 356,
       "transfersMade": 1,
+      "bankedFTs": 3,
       "transferCost": 0,
       "transfers": [
         {
           "in": "N.Williams",
           "out": "Khalaili",
+          "pointsIn": 2,
+          "pointsOut": 6,
           "time": "2026-09-18T16:13:32.582245Z"
         }
       ],
@@ -14308,11 +14343,14 @@
       "gameweekPoints": 36,
       "totalPoints": 350,
       "transfersMade": 1,
+      "bankedFTs": 0,
       "transferCost": 0,
       "transfers": [
         {
           "in": "Gibbs-White",
           "out": "Foden",
+          "pointsIn": 2,
+          "pointsOut": 0,
           "time": "2026-09-18T17:24:13.333728Z"
         }
       ],
@@ -15188,11 +15226,14 @@
       "gameweekPoints": 42,
       "totalPoints": 345,
       "transfersMade": 1,
+      "bankedFTs": 0,
       "transferCost": 0,
       "transfers": [
         {
           "in": "Barry",
           "out": "João Pedro",
+          "pointsIn": 6,
+          "pointsOut": 0,
           "time": "2026-09-18T17:10:32.578842Z"
         }
       ],
@@ -16018,96 +16059,133 @@
       "gameweekPoints": 33,
       "totalPoints": 342,
       "transfersMade": 0,
+      "bankedFTs": 1,
       "transferCost": 0,
       "transfers": [
         {
           "in": "Konsa",
           "out": "White",
+          "pointsIn": 1,
+          "pointsOut": 0,
           "time": "2026-09-15T02:02:28.469320Z"
         },
         {
           "in": "Gvardiol",
           "out": "Shaw",
+          "pointsIn": 4,
+          "pointsOut": 2,
           "time": "2026-09-15T02:02:28.469837Z"
         },
         {
           "in": "Hall",
           "out": "Diop",
+          "pointsIn": 13,
+          "pointsOut": 4,
           "time": "2026-09-15T02:02:28.470330Z"
         },
         {
           "in": "De Cuyper",
           "out": "O'Nien",
+          "pointsIn": 6,
+          "pointsOut": 0,
           "time": "2026-09-15T02:02:28.470804Z"
         },
         {
           "in": "Schade",
           "out": "Ødegaard",
+          "pointsIn": 9,
+          "pointsOut": 2,
           "time": "2026-09-15T02:02:28.471541Z"
         },
         {
           "in": "Groß",
           "out": "Slater",
+          "pointsIn": 14,
+          "pointsOut": 2,
           "time": "2026-09-15T02:02:28.471973Z"
         },
         {
           "in": "Wissa",
           "out": "Calvert-Lewin",
+          "pointsIn": 0,
+          "pointsOut": 2,
           "time": "2026-09-15T02:02:28.472322Z"
         },
         {
           "in": "Tavernier",
           "out": "Szoboszlai",
+          "pointsIn": 2,
+          "pointsOut": 2,
           "time": "2026-09-15T02:02:28.472555Z"
         },
         {
           "in": "Raya",
           "out": "Dubravka",
+          "pointsIn": 1,
+          "pointsOut": 0,
           "time": "2026-09-15T02:02:28.472765Z"
         },
         {
           "in": "Bentley",
           "out": "Verbruggen",
+          "pointsIn": 0,
+          "pointsOut": 6,
           "time": "2026-09-15T02:02:28.472979Z"
         },
         {
           "in": "Davis",
           "out": "Hall",
+          "pointsIn": 2,
+          "pointsOut": 13,
           "time": "2026-09-16T03:45:22.322709Z"
         },
         {
           "in": "Gibbs-White",
           "out": "Schade",
+          "pointsIn": 2,
+          "pointsOut": 9,
           "time": "2026-09-16T03:45:22.322932Z"
         },
         {
           "in": "Egan",
           "out": "De Cuyper",
+          "pointsIn": 1,
+          "pointsOut": 6,
           "time": "2026-09-16T03:45:22.323107Z"
         },
         {
           "in": "Barry",
           "out": "Wissa",
+          "pointsIn": 6,
+          "pointsOut": 0,
           "time": "2026-09-16T03:48:05.267190Z"
         },
         {
           "in": "Verbruggen",
           "out": "Bentley",
+          "pointsIn": 6,
+          "pointsOut": 0,
           "time": "2026-09-16T03:48:05.267467Z"
         },
         {
           "in": "Wissa",
           "out": "João Pedro",
+          "pointsIn": 0,
+          "pointsOut": 0,
           "time": "2026-09-18T13:36:55.420462Z"
         },
         {
           "in": "Saka",
           "out": "Gibbs-White",
+          "pointsIn": 2,
+          "pointsOut": 2,
           "time": "2026-09-18T13:36:55.420808Z"
         },
         {
           "in": "Mykolenko",
           "out": "Konsa",
+          "pointsIn": 5,
+          "pointsOut": 1,
           "time": "2026-09-18T13:36:55.421075Z"
         }
       ],
@@ -17000,36 +17078,49 @@
       "gameweekPoints": 41,
       "totalPoints": 336,
       "transfersMade": 0,
+      "bankedFTs": 2,
       "transferCost": 0,
       "transfers": [
         {
           "in": "Calvert-Lewin",
           "out": "João Pedro",
+          "pointsIn": 2,
+          "pointsOut": 0,
           "time": "2026-09-18T15:18:32.942883Z"
         },
         {
           "in": "Konsa",
           "out": "Shaw",
+          "pointsIn": 1,
+          "pointsOut": 2,
           "time": "2026-09-18T15:18:32.943177Z"
         },
         {
           "in": "Palmer",
           "out": "B.Fernandes",
+          "pointsIn": 2,
+          "pointsOut": 2,
           "time": "2026-09-18T15:18:32.943430Z"
         },
         {
           "in": "Hall",
           "out": "White",
+          "pointsIn": 13,
+          "pointsOut": 0,
           "time": "2026-09-18T15:18:32.943649Z"
         },
         {
           "in": "Saka",
           "out": "M.Sangaré",
+          "pointsIn": 2,
+          "pointsOut": 0,
           "time": "2026-09-18T15:18:32.943873Z"
         },
         {
           "in": "Tavernier",
           "out": "Ndiaye",
+          "pointsIn": 2,
+          "pointsOut": 5,
           "time": "2026-09-18T15:18:32.944083Z"
         }
       ],
@@ -17935,386 +18026,539 @@
       "gameweekPoints": 42,
       "totalPoints": 330,
       "transfersMade": 0,
+      "bankedFTs": 1,
       "transferCost": 0,
       "transfers": [
         {
           "in": "Verbruggen",
           "out": "Raya",
+          "pointsIn": 6,
+          "pointsOut": 1,
           "time": "2026-09-15T01:02:46.696065Z"
         },
         {
           "in": "Hall",
           "out": "Vuskovic",
+          "pointsIn": 13,
+          "pointsOut": 8,
           "time": "2026-09-15T01:02:46.696345Z"
         },
         {
           "in": "Yalcouyé",
           "out": "Wirtz",
+          "pointsIn": 1,
+          "pointsOut": 6,
           "time": "2026-09-15T01:02:46.696563Z"
         },
         {
           "in": "B.Fernandes",
           "out": "Foden",
+          "pointsIn": 2,
+          "pointsOut": 0,
           "time": "2026-09-15T01:02:46.696777Z"
         },
         {
           "in": "Gibbs-White",
           "out": "Tzolis",
+          "pointsIn": 2,
+          "pointsOut": 2,
           "time": "2026-09-15T01:02:46.697049Z"
         },
         {
           "in": "Wissa",
           "out": "Isak",
+          "pointsIn": 0,
+          "pointsOut": 8,
           "time": "2026-09-15T01:02:46.697287Z"
         },
         {
           "in": "Kinsky",
           "out": "Button",
+          "pointsIn": 2,
+          "pointsOut": 0,
           "time": "2026-09-15T01:02:46.697495Z"
         },
         {
           "in": "Konsa",
           "out": "van Ewijk",
+          "pointsIn": 1,
+          "pointsOut": 0,
           "time": "2026-09-15T01:02:46.697706Z"
         },
         {
           "in": "Hughes",
           "out": "Crooks",
+          "pointsIn": 0,
+          "pointsOut": 0,
           "time": "2026-09-15T01:02:46.697951Z"
         },
         {
           "in": "Gvardiol",
           "out": "Shaw",
+          "pointsIn": 4,
+          "pointsOut": 2,
           "time": "2026-09-15T01:02:46.698215Z"
         },
         {
           "in": "Reed",
           "out": "B.Fernandes",
+          "pointsIn": 0,
+          "pointsOut": 2,
           "time": "2026-09-15T12:26:46.786986Z"
         },
         {
           "in": "Saka",
           "out": "Rogers",
+          "pointsIn": 2,
+          "pointsOut": 2,
           "time": "2026-09-15T12:26:46.787431Z"
         },
         {
           "in": "Palmer",
           "out": "Yalcouyé",
+          "pointsIn": 2,
+          "pointsOut": 1,
           "time": "2026-09-15T12:26:46.787861Z"
         },
         {
           "in": "Belloumi",
           "out": "Hughes",
+          "pointsIn": 4,
+          "pointsOut": 0,
           "time": "2026-09-15T12:29:38.488948Z"
         },
         {
           "in": "Hughes",
           "out": "Belloumi",
+          "pointsIn": 0,
+          "pointsOut": 4,
           "time": "2026-09-15T12:33:14.935267Z"
         },
         {
           "in": "Maitland-Niles",
           "out": "Thomas",
+          "pointsIn": 8,
+          "pointsOut": 9,
           "time": "2026-09-15T12:41:07.665732Z"
         },
         {
           "in": "Kipré",
           "out": "Maitland-Niles",
+          "pointsIn": 0,
+          "pointsOut": 8,
           "time": "2026-09-15T12:54:27.726491Z"
         },
         {
           "in": "Belloumi",
           "out": "Hughes",
+          "pointsIn": 4,
+          "pointsOut": 0,
           "time": "2026-09-15T12:54:27.726794Z"
         },
         {
           "in": "Yalcouyé",
           "out": "Belloumi",
+          "pointsIn": 1,
+          "pointsOut": 4,
           "time": "2026-09-15T12:57:11.263783Z"
         },
         {
           "in": "Maitland-Niles",
           "out": "Kipré",
+          "pointsIn": 8,
+          "pointsOut": 0,
           "time": "2026-09-15T12:57:11.264060Z"
         },
         {
           "in": "Button",
           "out": "Kinsky",
+          "pointsIn": 0,
+          "pointsOut": 2,
           "time": "2026-09-16T01:25:56.054645Z"
         },
         {
           "in": "Tarkowski",
           "out": "Konsa",
+          "pointsIn": 14,
+          "pointsOut": 1,
           "time": "2026-09-16T01:25:56.054925Z"
         },
         {
           "in": "Walle Egeli",
           "out": "João Pedro",
+          "pointsIn": 0,
+          "pointsOut": 0,
           "time": "2026-09-16T01:25:56.055149Z"
         },
         {
           "in": "Raya",
           "out": "Verbruggen",
+          "pointsIn": 1,
+          "pointsOut": 6,
           "time": "2026-09-16T01:25:56.055396Z"
         },
         {
           "in": "N.Williams",
           "out": "Maitland-Niles",
+          "pointsIn": 2,
+          "pointsOut": 8,
           "time": "2026-09-16T01:25:56.055620Z"
         },
         {
           "in": "Barry",
           "out": "Wissa",
+          "pointsIn": 6,
+          "pointsOut": 0,
           "time": "2026-09-16T01:33:43.587933Z"
         },
         {
           "in": "Kamada",
           "out": "Reed",
+          "pointsIn": 3,
+          "pointsOut": 0,
           "time": "2026-09-16T01:33:43.588159Z"
         },
         {
           "in": "Ødegaard",
           "out": "Saka",
+          "pointsIn": 2,
+          "pointsOut": 2,
           "time": "2026-09-16T02:06:16.137209Z"
         },
         {
           "in": "João Pedro",
           "out": "Barry",
+          "pointsIn": 0,
+          "pointsOut": 6,
           "time": "2026-09-16T02:06:16.137664Z"
         },
         {
           "in": "King",
           "out": "Kamada",
+          "pointsIn": 2,
+          "pointsOut": 3,
           "time": "2026-09-16T02:07:39.645129Z"
         },
         {
           "in": "Kinsky",
           "out": "Raya",
+          "pointsIn": 2,
+          "pointsOut": 1,
           "time": "2026-09-16T02:36:44.234868Z"
         },
         {
           "in": "Konsa",
           "out": "N.Williams",
+          "pointsIn": 1,
+          "pointsOut": 2,
           "time": "2026-09-16T02:36:44.235109Z"
         },
         {
           "in": "Verbruggen",
           "out": "Button",
+          "pointsIn": 6,
+          "pointsOut": 0,
           "time": "2026-09-16T02:36:44.235279Z"
         },
         {
           "in": "Dewsbury-Hall",
           "out": "King",
+          "pointsIn": 3,
+          "pointsOut": 2,
           "time": "2026-09-16T02:36:44.235444Z"
         },
         {
           "in": "Gomez",
           "out": "Yalcouyé",
+          "pointsIn": 8,
+          "pointsOut": 1,
           "time": "2026-09-16T02:36:44.235614Z"
         },
         {
           "in": "Rogers",
           "out": "Palmer",
+          "pointsIn": 2,
+          "pointsOut": 2,
           "time": "2026-09-16T08:24:36.925486Z"
         },
         {
           "in": "Kamada",
           "out": "Gomez",
+          "pointsIn": 3,
+          "pointsOut": 8,
           "time": "2026-09-16T08:24:36.925789Z"
         },
         {
           "in": "Wissa",
           "out": "Walle Egeli",
+          "pointsIn": 0,
+          "pointsOut": 0,
           "time": "2026-09-16T08:24:36.926011Z"
         },
         {
           "in": "Raya",
           "out": "Kinsky",
+          "pointsIn": 1,
+          "pointsOut": 2,
           "time": "2026-09-16T09:13:29.343601Z"
         },
         {
           "in": "Branthwaite",
           "out": "Tarkowski",
+          "pointsIn": 8,
+          "pointsOut": 14,
           "time": "2026-09-16T09:13:29.343988Z"
         },
         {
           "in": "De Cuyper",
           "out": "Hall",
+          "pointsIn": 6,
+          "pointsOut": 13,
           "time": "2026-09-16T09:13:29.344258Z"
         },
         {
           "in": "Reed",
           "out": "Dewsbury-Hall",
+          "pointsIn": 0,
+          "pointsOut": 3,
           "time": "2026-09-16T09:13:29.344519Z"
         },
         {
           "in": "Palmer",
           "out": "Ødegaard",
+          "pointsIn": 2,
+          "pointsOut": 2,
           "time": "2026-09-16T09:13:29.344762Z"
         },
         {
           "in": "Bentley",
           "out": "Verbruggen",
+          "pointsIn": 0,
+          "pointsOut": 6,
           "time": "2026-09-16T09:13:29.344997Z"
         },
         {
           "in": "Hughes",
           "out": "Kamada",
+          "pointsIn": 0,
+          "pointsOut": 3,
           "time": "2026-09-16T09:13:29.345360Z"
         },
         {
           "in": "Mykolenko",
           "out": "Branthwaite",
+          "pointsIn": 5,
+          "pointsOut": 8,
           "time": "2026-09-16T09:17:34.268939Z"
         },
         {
           "in": "Walle Egeli",
           "out": "Wissa",
+          "pointsIn": 0,
+          "pointsOut": 0,
           "time": "2026-09-16T09:17:34.269438Z"
         },
         {
           "in": "Dewsbury-Hall",
           "out": "Hughes",
+          "pointsIn": 3,
+          "pointsOut": 0,
           "time": "2026-09-16T09:17:34.269871Z"
         },
         {
           "in": "Hall",
           "out": "De Cuyper",
+          "pointsIn": 13,
+          "pointsOut": 6,
           "time": "2026-09-16T09:22:59.543997Z"
         },
         {
           "in": "Davis",
           "out": "Mykolenko",
+          "pointsIn": 2,
+          "pointsOut": 5,
           "time": "2026-09-16T09:38:27.466423Z"
         },
         {
           "in": "Hughes",
           "out": "Hall",
+          "pointsIn": 0,
+          "pointsOut": 13,
           "time": "2026-09-16T09:38:27.466847Z"
         },
         {
           "in": "Schade",
           "out": "Dewsbury-Hall",
+          "pointsIn": 9,
+          "pointsOut": 3,
           "time": "2026-09-16T09:38:27.467115Z"
         },
         {
           "in": "Kamada",
           "out": "Reed",
+          "pointsIn": 3,
+          "pointsOut": 0,
           "time": "2026-09-16T09:38:27.467439Z"
         },
         {
           "in": "Wissa",
           "out": "Walle Egeli",
+          "pointsIn": 0,
+          "pointsOut": 0,
           "time": "2026-09-16T09:38:27.467809Z"
         },
         {
           "in": "Egan",
           "out": "Hughes",
+          "pointsIn": 1,
+          "pointsOut": 0,
           "time": "2026-09-16T09:38:56.076166Z"
         },
         {
           "in": "Slater",
           "out": "Kamada",
+          "pointsIn": 2,
+          "pointsOut": 3,
           "time": "2026-09-16T09:50:07.662727Z"
         },
         {
           "in": "Mykolenko",
           "out": "Egan",
+          "pointsIn": 5,
+          "pointsOut": 1,
           "time": "2026-09-16T09:55:16.493630Z"
         },
         {
           "in": "Gonzalo",
           "out": "Wissa",
+          "pointsIn": 2,
+          "pointsOut": 0,
           "time": "2026-09-16T10:09:32.829756Z"
         },
         {
           "in": "Sávio",
           "out": "Schade",
+          "pointsIn": 2,
+          "pointsOut": 9,
           "time": "2026-09-16T10:19:47.962119Z"
         },
         {
           "in": "Barry",
           "out": "Gonzalo",
+          "pointsIn": 6,
+          "pointsOut": 2,
           "time": "2026-09-16T10:19:47.962458Z"
         },
         {
           "in": "Delap",
           "out": "Barry",
+          "pointsIn": 1,
+          "pointsOut": 6,
           "time": "2026-09-16T10:43:34.026829Z"
         },
         {
           "in": "Dewsbury-Hall",
           "out": "Sávio",
+          "pointsIn": 3,
+          "pointsOut": 2,
           "time": "2026-09-16T11:25:24.500433Z"
         },
         {
           "in": "Walle Egeli",
           "out": "Delap",
+          "pointsIn": 0,
+          "pointsOut": 1,
           "time": "2026-09-16T11:28:03.121946Z"
         },
         {
           "in": "Hughes",
           "out": "Mykolenko",
+          "pointsIn": 0,
+          "pointsOut": 5,
           "time": "2026-09-16T11:28:03.122174Z"
         },
         {
           "in": "Schade",
           "out": "Slater",
+          "pointsIn": 9,
+          "pointsOut": 2,
           "time": "2026-09-16T11:28:03.122359Z"
         },
         {
           "in": "Giles",
           "out": "Hughes",
+          "pointsIn": 0,
+          "pointsOut": 0,
           "time": "2026-09-16T11:28:46.376056Z"
         },
         {
           "in": "Kinsky",
           "out": "Raya",
+          "pointsIn": 2,
+          "pointsOut": 1,
           "time": "2026-09-17T01:12:53.736091Z"
         },
         {
           "in": "Verbruggen",
           "out": "Bentley",
+          "pointsIn": 6,
+          "pointsOut": 0,
           "time": "2026-09-17T01:12:53.736581Z"
         },
         {
           "in": "De Cuyper",
           "out": "Giles",
+          "pointsIn": 6,
+          "pointsOut": 0,
           "time": "2026-09-17T01:12:53.737102Z"
         },
         {
           "in": "Yalcouyé",
           "out": "Dewsbury-Hall",
+          "pointsIn": 1,
+          "pointsOut": 3,
           "time": "2026-09-17T03:59:51.774768Z"
         },
         {
           "in": "Tarkowski",
           "out": "Davis",
+          "pointsIn": 14,
+          "pointsOut": 2,
           "time": "2026-09-17T03:59:51.775122Z"
         },
         {
           "in": "Giles",
           "out": "De Cuyper",
+          "pointsIn": 0,
+          "pointsOut": 6,
           "time": "2026-09-17T11:41:46.753363Z"
         },
         {
           "in": "King",
           "out": "Yalcouyé",
+          "pointsIn": 2,
+          "pointsOut": 1,
           "time": "2026-09-17T11:41:46.753894Z"
         },
         {
           "in": "Dewsbury-Hall",
           "out": "Schade",
+          "pointsIn": 3,
+          "pointsOut": 9,
           "time": "2026-09-18T09:20:20.079671Z"
         },
         {
           "in": "Calvert-Lewin",
           "out": "João Pedro",
+          "pointsIn": 2,
+          "pointsOut": 0,
           "time": "2026-09-18T09:20:20.080000Z"
         },
         {
           "in": "Ødegaard",
           "out": "King",
+          "pointsIn": 2,
+          "pointsOut": 2,
           "time": "2026-09-18T09:20:20.080223Z"
         }
       ],
@@ -19208,6 +19452,7 @@
       "gameweekPoints": 41,
       "totalPoints": 307,
       "transfersMade": 0,
+      "bankedFTs": 1,
       "transferCost": 0,
       "transfers": [],
       "chip": null,

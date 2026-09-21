@@ -1,14 +1,17 @@
+import io
 import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from telegram_report import (
     _data_is_ready,
     _pack_messages,
     _report_key,
+    _send_message,
     _target_event,
     _transfer_data_is_ready,
     build_report_blocks,
@@ -147,6 +150,20 @@ class ReportFormattingTests(unittest.TestCase):
 
         self.assertEqual(len(messages), 2)
         self.assertTrue(all(len(message) <= 4096 for message in messages))
+
+    def test_telegram_http_error_includes_the_api_description(self):
+        error = HTTPError(
+            "https://api.telegram.org/redacted/sendMessage",
+            400,
+            "Bad Request",
+            {},
+            io.BytesIO(
+                b'{"ok":false,"error_code":400,"description":"Bad Request: chat not found"}'
+            ),
+        )
+        with patch("telegram_report.urlopen", side_effect=error):
+            with self.assertRaisesRegex(RuntimeError, "chat not found"):
+                _send_message("secret-token", "-123", "test")
 
     def test_waits_if_the_formatted_transfers_are_incomplete(self):
         data = sample_data()

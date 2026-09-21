@@ -18,6 +18,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from config import FPL_API_URL
@@ -353,8 +354,17 @@ def _send_message(
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urlopen(request, timeout=20) as response:
-        result = json.load(response)
+    try:
+        with urlopen(request, timeout=20) as response:
+            result = json.load(response)
+    except HTTPError as error:
+        try:
+            error_payload = json.loads(error.read().decode("utf-8"))
+            description = error_payload.get("description")
+        except (UnicodeDecodeError, json.JSONDecodeError, AttributeError):
+            description = None
+        detail = description or error.reason or f"HTTP {error.code}"
+        raise RuntimeError(f"Telegram API rejected the message: {detail}") from None
     if not result.get("ok"):
         raise RuntimeError(result.get("description") or "Telegram rejected the report")
     return int(result["result"]["message_id"])

@@ -2091,6 +2091,15 @@ a:hover { color: var(--muted); }
 }
 
 @media (display-mode: standalone) and (max-width: 700px) {
+  body {
+    padding-bottom: calc(var(--mobile-tab-bar-height) + env(safe-area-inset-bottom) + 33px);
+  }
+
+  .mobile-tab-bar {
+    height: calc(var(--mobile-tab-bar-height) + env(safe-area-inset-bottom) + 15px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 15px);
+  }
+
   .mobile-tab-bar::after {
     position: absolute;
     right: 0;

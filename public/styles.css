@@ -1483,6 +1483,10 @@ a:hover { color: var(--muted); }
     padding: 0 12px calc(var(--mobile-tab-bar-height) + env(safe-area-inset-bottom) + 18px);
   }
 
+  main {
+    margin-bottom: 0;
+  }
+
   main[data-mobile-tab="league"] > .team-detail,
   main[data-mobile-tab="league"] > .ownership-panel,
   main[data-mobile-tab="league"] > .stats-panel,
@@ -1775,7 +1779,7 @@ a:hover { color: var(--muted); }
   }
 
   .table-wrap {
-    overflow-x: auto;
+    overflow-x: hidden;
   }
 
   .table-toolbar {

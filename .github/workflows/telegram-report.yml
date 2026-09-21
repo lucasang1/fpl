@@ -1,0 +1,66 @@
+name: Telegram gameweek report
+
+on:
+  schedule:
+    # The script itself waits until 30 minutes after the live FPL deadline.
+    - cron: "2/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print the report without sending it
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: telegram-gameweek-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check and send scheduled report
+        if: github.event_name == 'schedule'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
+        run: python telegram_report.py
+
+      - name: Preview manual report
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+        run: python telegram_report.py --dry-run --allow-past
+
+      - name: Send manual report
+        if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
+        run: python telegram_report.py --allow-past
+
+      - name: Persist successful send marker
+        shell: bash
+        run: |
+          marker=$(find data/telegram -type f -name '*.json' -print -quit 2>/dev/null || true)
+          if [[ -z "$marker" ]]; then
+            exit 0
+          fi
+          report_key=$(basename "$marker" .json)
+          next_check=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["nextCheckEpoch"])' "$marker")
+          tag="telegram-report-${report_key}-next-${next_check}"
+          git tag -a "$tag" -m "Telegram report sent for ${report_key}"
+          git push origin "$tag"

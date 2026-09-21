@@ -46,6 +46,34 @@ variables when needed.
 
 Pairings and local headshot paths are configured in `config.py`.
 
+## Telegram Gameweek Report
+
+The `Telegram gameweek report` GitHub Actions workflow sends a league report
+containing captain groups, chips, transfers, and transfer hits. Add these
+repository Actions secrets before enabling it:
+
+| Secret | Description |
+| --- | --- |
+| `TELEGRAM_BOT_TOKEN` | Token issued by BotFather. |
+| `TELEGRAM_CHAT_ID` | Destination group or chat ID. |
+| `TELEGRAM_THREAD_ID` | Optional forum-topic ID. |
+
+The workflow wakes every five minutes. Team scraping starts 30 minutes after
+the live FPL deadline and retries until all 15 picks and transfer data are
+available. A successful send creates a `telegram-report-*` git tag, which
+prevents duplicates and defers further FPL checks until 30 minutes after the
+next known deadline.
+
+Scheduled delivery starts with the first deadline after this workflow is
+committed, so enabling it cannot unexpectedly post an old report. The workflow
+can also be run manually. Its `dry_run` option defaults to true so the generated
+report is printed in the Actions log without posting to Telegram. To preview a
+past or current gameweek locally after its reporting window:
+
+```sh
+python3 telegram_report.py --dry-run --allow-past
+```
+
 ## API
 
 The frontend reads standings from:

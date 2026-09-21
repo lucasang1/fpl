@@ -23,6 +23,9 @@ htmlcov/
 .env.*
 !.env.example
 
+# Local/scheduled Telegram delivery markers (the durable marker is a git tag)
+data/telegram/
+
 # Editors and operating systems
 .idea/
 .vscode/

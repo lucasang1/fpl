@@ -6,11 +6,15 @@ const status = document.querySelector("#status");
 const refreshButton = document.querySelector("#refresh");
 const refreshIcon = refreshButton?.querySelector(".refresh-icon");
 const lastUpdated = document.querySelector("#last-updated");
-const gameweekSelect = document.querySelector("#gameweek-select");
+const gameweekPreviousButton = document.querySelector("#gameweek-previous");
+const gameweekNextButton = document.querySelector("#gameweek-next");
+const gameweekValue = document.querySelector("#gameweek-value");
 const pairsViewButton = document.querySelector("#pairs-view");
 const teamsViewButton = document.querySelector("#teams-view");
 const standingsCard = document.querySelector(".table-wrap");
+const chipsList = document.querySelector("#chips-list");
 const teamDetail = document.querySelector("#team-detail");
+const teamSummaryPanel = document.querySelector("#team-summary-panel");
 const ownershipPanel = document.querySelector(".ownership-panel");
 const playerOwnership = document.querySelector("#player-ownership");
 const duoImportanceSelect = document.querySelector("#duo-importance-select");
@@ -24,6 +28,7 @@ const importanceDialogTitle = document.querySelector("#importance-dialog-title")
 const importanceDialogBody = document.querySelector("#importance-dialog-body");
 const importanceDialogClose = document.querySelector("#importance-dialog-close");
 const themeToggle = document.querySelector("#theme-toggle");
+const mobileTabButtons = [...document.querySelectorAll(".mobile-tab")];
 const transferDialog = document.createElement("div");
 const transferDialogBody = document.createElement("div");
 let standingsData;
@@ -31,6 +36,8 @@ let activeView = "pairs";
 let activeTeamId;
 let activeDuoImportanceName = "";
 let liveOnlyImportance = false;
+let liveOnlyImportanceContext = "";
+let liveOnlyImportanceManuallySet = false;
 let updatedAt;
 let activeImportanceAnchor;
 let activeImportanceMode = "modal";
@@ -41,6 +48,7 @@ let standingsRefreshTimer;
 let lastFetchAt = 0;
 let isLoadingStandings = false;
 let selectedGameweekId;
+let availableGameweeks = [];
 let headerBaseFontSizes = [];
 let headerScaleFrame;
 let teamColumnFitFrame;
@@ -55,6 +63,7 @@ const standingsStorageKey = "fpl:standingsSnapshot:v2";
 const themeTransitionDuration = 1120;
 let teamStatsFitFrame;
 let themeTransitionTimer;
+let activeMobileTab = "league";
 
 transferDialog.id = "transfer-dialog";
 transferDialog.className = "importance-dialog transfer-dialog";
@@ -302,7 +311,9 @@ function pluralize(singular, count, plural = `${singular}s`) {
 
 function teamStatsFit(stats) {
   const statsRect = stats.getBoundingClientRect();
-  const statRects = Array.from(stats.children, (stat) => stat.getBoundingClientRect());
+  const statRects = Array.from(stats.children)
+    .filter((stat) => stat.getClientRects().length > 0)
+    .map((stat) => stat.getBoundingClientRect());
   if (!statRects.length || !statsRect.width) return true;
 
   const left = Math.min(...statRects.map((rect) => rect.left));
@@ -418,23 +429,46 @@ function animateRefreshIcon() {
   refreshIcon.classList.add("refresh-icon-spin");
 }
 
-function renderGameweekOptions(data) {
-  if (!gameweekSelect) return;
+function updateGameweekControls() {
+  const selectedIndex = availableGameweeks.findIndex(
+    (gameweek) => gameweek.id === selectedGameweekId,
+  );
 
+  if (gameweekValue) {
+    gameweekValue.textContent = Number.isFinite(selectedGameweekId)
+      ? String(selectedGameweekId)
+      : "—";
+  }
+  if (gameweekPreviousButton) {
+    gameweekPreviousButton.disabled = isLoadingStandings || selectedIndex <= 0;
+  }
+  if (gameweekNextButton) {
+    gameweekNextButton.disabled = isLoadingStandings
+      || selectedIndex < 0
+      || selectedIndex >= availableGameweeks.length - 1;
+  }
+}
+
+function renderGameweekControls(data) {
   const gameweeks = Array.isArray(data.availableGameweeks) && data.availableGameweeks.length
     ? data.availableGameweeks
     : [data.gameweek];
 
-  gameweekSelect.replaceChildren(
-    ...gameweeks.map((gameweek) => {
-      const option = document.createElement("option");
-      option.value = String(gameweek.id);
-      option.textContent = `GW ${gameweek.id}`;
-      return option;
-    }),
-  );
-  gameweekSelect.value = String(data.gameweek.id);
+  availableGameweeks = [...gameweeks].sort((a, b) => a.id - b.id);
   selectedGameweekId = data.gameweek.id;
+  updateGameweekControls();
+}
+
+function stepGameweek(offset) {
+  const selectedIndex = availableGameweeks.findIndex(
+    (gameweek) => gameweek.id === selectedGameweekId,
+  );
+  const gameweek = availableGameweeks[selectedIndex + offset];
+  if (!gameweek || isLoadingStandings) return;
+
+  selectedGameweekId = gameweek.id;
+  updateGameweekControls();
+  loadStandings(false);
 }
 
 function refreshStandingsAfterResume() {
@@ -521,6 +555,37 @@ function createStackedCell(values, className, label) {
     ...values.map((value) => {
       const item = document.createElement("span");
       item.textContent = value;
+      return item;
+    }),
+  );
+  return element;
+}
+
+function createStatusCountContent(value, hasCaptain) {
+  const content = document.createElement("span");
+  const count = document.createElement("span");
+  content.className = "status-count";
+  count.textContent = value;
+  content.append(count);
+  if (hasCaptain) content.append(createCaptainPill("C"));
+  return content;
+}
+
+function createStatusCell(value, label, hasCaptain) {
+  const element = createCell("", "number status-cell", label);
+  element.replaceChildren(createStatusCountContent(value, hasCaptain));
+  return element;
+}
+
+function createStackedStatusCell(members, field, label) {
+  const element = createCell("", "stacked-number number status-cell", label);
+  element.replaceChildren(
+    ...members.map((member) => {
+      const item = document.createElement("span");
+      item.append(createStatusCountContent(
+        member[field] ?? 0,
+        member.captainStatus === field,
+      ));
       return item;
     }),
   );
@@ -658,8 +723,8 @@ function createTeamRow(team) {
   row.append(
     createRankCell(team.rank, team.rankMovement),
     teamCell,
-    createCell(team.inPlay ?? 0, "number", "In Play"),
-    createCell(team.toStart ?? 0, "number", "To Start"),
+    createStatusCell(team.toStart ?? 0, "To Start", team.captainStatus === "toStart"),
+    createStatusCell(team.inPlay ?? 0, "In Play", team.captainStatus === "inPlay"),
     createCell(team.gameweekPoints, "number", "GW Indiv"),
     createCell(team.gameweekPoints, "number", "GW Total"),
     createCell(team.totalPoints, "number", "Total"),
@@ -675,19 +740,28 @@ function createPairMemberPlaceholder() {
   return placeholder;
 }
 
+function getPairMembersInPointsOrder(pair) {
+  return [...(pair.members || [])].sort((a, b) => {
+    const aPoints = Number.isFinite(a.totalPoints) ? a.totalPoints : -Infinity;
+    const bPoints = Number.isFinite(b.totalPoints) ? b.totalPoints : -Infinity;
+    return bPoints - aPoints;
+  });
+}
+
 function createPairRow(pair) {
   const row = document.createElement("tr");
   const teamCell = document.createElement("td");
   const teamsById = new Map((standingsData?.standings || []).map((team) => [team.id, team]));
+  const members = getPairMembersInPointsOrder(pair);
   const seenMemberIds = new Set();
-  const hasDuplicateMembers = new Set(pair.members.map((member) => member.id)).size < pair.members.length;
+  const hasDuplicateMembers = new Set(members.map((member) => member.id)).size < members.length;
 
   teamCell.className = "pair-members";
   if (hasDuplicateMembers) {
     teamCell.classList.add("pair-members-centered");
   }
   teamCell.dataset.label = "Teams";
-  for (const member of pair.members) {
+  for (const member of members) {
     if (seenMemberIds.has(member.id)) {
       teamCell.append(createPairMemberPlaceholder());
       continue;
@@ -701,13 +775,13 @@ function createPairRow(pair) {
   row.append(
     createRankCell(pair.rank, pair.rankMovement),
     teamCell,
-    createStackedCell(pair.members.map((member) => member.inPlay ?? 0), "number", "In Play"),
-    createStackedCell(pair.members.map((member) => member.toStart ?? 0), "number", "To Start"),
-    createStackedCell(pair.members.map((member) => member.gameweekPoints), "number", "GW Indiv"),
+    createStackedStatusCell(members, "toStart", "To Start"),
+    createStackedStatusCell(members, "inPlay", "In Play"),
+    createStackedCell(members.map((member) => member.gameweekPoints), "number", "GW Indiv"),
     createCell(pair.gameweekPoints, "number", "GW Total"),
     createCell(pair.totalPoints, "number", "Total"),
   );
-  addPairRowInteraction(row, pair.members);
+  addPairRowInteraction(row, members);
   return row;
 }
 
@@ -731,6 +805,91 @@ function formatChipName(chip) {
     TC: "Triple Captain",
   };
   return chipNames[chip] || chip || "-";
+}
+
+const availableChips = ["BB", "FH", "TC", "WC"];
+
+function createChipsHeader() {
+  const row = document.createElement("div");
+  row.className = "chips-row chips-header";
+  for (const label of ["Team", "Chips"]) {
+    const cell = document.createElement("span");
+    cell.textContent = label;
+    row.append(cell);
+  }
+  return row;
+}
+
+function createChipsRow(team, { showTeamName = true } = {}) {
+  const row = document.createElement("div");
+  const name = document.createElement("span");
+  const chips = document.createElement("span");
+  const detail = (standingsData?.teamDetails || []).find((item) => item.id === team.id);
+  const chipHistory = Array.isArray(detail?.chipsPlayed)
+    ? detail.chipsPlayed
+    : (detail?.chip ? [{ chip: detail.chip }] : []);
+  const playedChips = new Set(chipHistory.map((item) => item.chip));
+
+  row.className = "chips-row";
+  name.className = "chips-team-name";
+  name.textContent = team.team;
+  chips.className = "chips-pills";
+
+  for (const chipName of availableChips) {
+    const chip = document.createElement("span");
+    const hasPlayed = playedChips.has(chipName);
+    const isActive = detail?.chip === chipName
+      && standingsData?.gameweek?.id === standingsData?.currentGameweek?.id;
+    const stateClass = isActive
+      ? " chips-pill-active"
+      : (hasPlayed ? " chips-pill-played" : "");
+    chip.className = `chip-pill chips-pill${stateClass}`;
+    chip.textContent = chipName;
+    chip.title = `${formatChipName(chipName)} — ${isActive ? "active" : hasPlayed ? "played" : "not played"}`;
+    chip.setAttribute("aria-label", chip.title);
+    chips.append(chip);
+  }
+
+  if (showTeamName) {
+    row.append(name, chips);
+  } else {
+    row.classList.add("chips-row-centered");
+    row.append(chips);
+  }
+  return row;
+}
+
+function getTeamsInDuoLeagueOrder() {
+  const standings = standingsData?.standings || [];
+  const teamsById = new Map(standings.map((team) => [team.id, team]));
+  const orderedTeams = [];
+  const addedTeamIds = new Set();
+
+  for (const pair of standingsData?.pairs || []) {
+    for (const member of getPairMembersInPointsOrder(pair)) {
+      if (addedTeamIds.has(member.id)) continue;
+
+      const team = teamsById.get(member.id);
+      if (!team) continue;
+      orderedTeams.push(team);
+      addedTeamIds.add(member.id);
+    }
+  }
+
+  for (const team of standings) {
+    if (addedTeamIds.has(team.id)) continue;
+    orderedTeams.push(team);
+  }
+
+  return orderedTeams;
+}
+
+function renderChips() {
+  if (!chipsList || !standingsData) return;
+  chipsList.replaceChildren(
+    createChipsHeader(),
+    ...getTeamsInDuoLeagueOrder().map(createChipsRow),
+  );
 }
 
 function createCaptainPill(label) {
@@ -1056,12 +1215,50 @@ function createTransferStat(detail) {
 
 function createChipStat(detail) {
   const stat = createTeamStat("Chip", formatChipName(detail.chip));
+  stat.classList.add("team-detail-chip-stat");
   return createHoverStat(stat, () => createChipDetails(detail));
 }
 
 function createValueStat(detail) {
   const stat = createTeamStat("Total Value", formatTeamValue(detail.teamValue));
+  stat.classList.add("team-detail-value-stat");
   return createHoverStat(stat, () => createValueDetails(detail));
+}
+
+function createTeamValueSummary(detail) {
+  const values = document.createElement("div");
+  values.className = "team-summary-values";
+
+  const squadValue = Number.isFinite(detail.teamValue) && Number.isFinite(detail.bank)
+    ? detail.teamValue - detail.bank
+    : undefined;
+
+  for (const [label, value, formatter] of [
+    ["Squad Value", squadValue, formatTeamValue],
+    ["Bank", detail.bank, formatTeamValue],
+    ["Total Value", detail.teamValue, formatTeamValue],
+    ["Total Points", detail.totalPoints, formatStatValue],
+  ]) {
+    const item = document.createElement("div");
+    const itemLabel = document.createElement("span");
+    const itemValue = document.createElement("strong");
+    item.className = "team-summary-value";
+    itemLabel.textContent = label;
+    itemValue.textContent = formatter(value);
+    item.append(itemLabel, itemValue);
+    values.append(item);
+  }
+
+  return values;
+}
+
+function renderTeamSummary(detail, standingsTeam) {
+  if (!teamSummaryPanel) return;
+  teamSummaryPanel.hidden = false;
+  teamSummaryPanel.replaceChildren(
+    createTeamValueSummary(detail),
+    createChipsRow(standingsTeam, { showTeamName: false }),
+  );
 }
 
 function createHoverStat(stat, createContent) {
@@ -1259,6 +1456,10 @@ function renderTeamDetail() {
   if (!detail || !standingsTeam) {
     closeTransferDialog();
     teamDetail.replaceChildren();
+    if (teamSummaryPanel) {
+      teamSummaryPanel.hidden = true;
+      teamSummaryPanel.replaceChildren();
+    }
     return;
   }
 
@@ -1270,6 +1471,7 @@ function renderTeamDetail() {
   const teamName = createTeamDetailTeamSelect(detail);
   const gameweekScore = createGameweekScore(detail.gameweekPoints);
   const stats = document.createElement("div");
+  const totalPointsStat = createTeamStat("Total Points", detail.totalPoints);
   const players = document.createElement("div");
 
   header.className = "team-detail-header";
@@ -1278,8 +1480,9 @@ function renderTeamDetail() {
   titleText.className = "team-detail-title-text";
 
   stats.className = "team-detail-stats";
+  totalPointsStat.classList.add("team-detail-total-points-stat");
   stats.append(
-    createTeamStat("Total Points", detail.totalPoints),
+    totalPointsStat,
     createTransferStat(detail),
     createChipStat(detail),
     createValueStat(detail),
@@ -1297,6 +1500,7 @@ function renderTeamDetail() {
   );
 
   teamDetail.replaceChildren(header, players);
+  renderTeamSummary(detail, standingsTeam);
   scheduleTeamStatsFit();
   syncOwnershipHeight();
 }
@@ -1304,11 +1508,43 @@ function renderTeamDetail() {
 function openTeamDetail(teamId, { scroll = true } = {}) {
   activeTeamId = teamId;
   saveTeamId(teamId);
+  if (mobileLayout.matches) setMobileTab("team", { scroll: false });
   closeImportanceDialog();
   closeTransferDialog();
   renderActiveView();
   renderOwnership();
-  if (scroll) requestAnimationFrame(scrollToTeamDetail);
+  if (scroll) {
+    requestAnimationFrame(() => {
+      if (mobileLayout.matches) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        scrollToTeamDetail();
+      }
+    });
+  }
+}
+
+function setMobileTab(tab, { scroll = true } = {}) {
+  if (!["league", "team", "importance", "transfers"].includes(tab)) return;
+  activeMobileTab = tab;
+  main.dataset.mobileTab = tab;
+  mobileTabButtons.forEach((button) => {
+    const isActive = button.dataset.mobileTab === tab;
+    button.classList.toggle("is-active", isActive);
+    if (isActive) {
+      button.setAttribute("aria-current", "page");
+    } else {
+      button.removeAttribute("aria-current");
+    }
+  });
+  closeImportanceDialog();
+  closeTransferDialog();
+  if (scroll && mobileLayout.matches) window.scrollTo({ top: 0, behavior: "smooth" });
+  requestAnimationFrame(() => {
+    scheduleTeamStatsFit();
+    scheduleStandingsColumnFit();
+    syncOwnershipHeight();
+  });
 }
 
 function renderActiveView() {
@@ -1342,6 +1578,9 @@ function renderOwnership() {
     playerOwnership.replaceChildren();
     importancePagination.hidden = true;
     liveOnlyFilter.hidden = true;
+    liveOnlyImportance = false;
+    liveOnlyImportanceContext = "";
+    liveOnlyImportanceManuallySet = false;
     return;
   }
   const selectedDuo =
@@ -1357,9 +1596,19 @@ function renderOwnership() {
   );
   duoImportanceSelect.value = activeDuoImportanceName;
 
-  const hasLivePlayers = selectedDuo.players.some((player) => player.isLive);
+  const livePlayerCount = selectedDuo.players.filter((player) => player.isLive).length;
+  const hasLivePlayers = livePlayerCount > 0;
+  const liveOnlyContext = `${standingsData.gameweek?.id ?? ""}:${selectedDuo.name}`;
+  if (liveOnlyImportanceContext !== liveOnlyContext) {
+    liveOnlyImportanceContext = liveOnlyContext;
+    liveOnlyImportanceManuallySet = false;
+  }
+  if (!liveOnlyImportanceManuallySet) liveOnlyImportance = livePlayerCount > 0;
   liveOnlyFilter.hidden = !hasLivePlayers;
-  if (!hasLivePlayers) liveOnlyImportance = false;
+  if (!hasLivePlayers) {
+    liveOnlyImportance = false;
+    liveOnlyImportanceManuallySet = false;
+  }
   liveOnlyFilter.setAttribute("aria-pressed", String(liveOnlyImportance));
 
   const players = selectedDuo.players.filter(
@@ -1370,12 +1619,18 @@ function renderOwnership() {
       Math.sign(a.importance) - Math.sign(b.importance) ||
       a.name.localeCompare(b.name),
   );
-  const pageCount = Math.max(1, Math.ceil(players.length / importancePageSize));
+  const showAllPlayers = mobileLayout.matches;
+  const pageCount = showAllPlayers
+    ? 1
+    : Math.max(1, Math.ceil(players.length / importancePageSize));
+  if (showAllPlayers) importancePage = 0;
   importancePage = Math.min(importancePage, pageCount - 1);
-  const visiblePlayers = players.slice(
-    importancePage * importancePageSize,
-    (importancePage + 1) * importancePageSize,
-  );
+  const visiblePlayers = showAllPlayers
+    ? players
+    : players.slice(
+      importancePage * importancePageSize,
+      (importancePage + 1) * importancePageSize,
+    );
   playerOwnership.replaceChildren(
     createImportanceHeader(),
     ...visiblePlayers.map(createImportanceRow),
@@ -1415,24 +1670,25 @@ function renderStandings(data, { saveSnapshot = true, animateRefresh = false } =
   leagueName.textContent = data.league.name;
   status.textContent = data.gameweek.name;
   updatedAt = new Date(data.updatedAt);
-  renderGameweekOptions(data);
+  renderGameweekControls(data);
   if (saveSnapshot) saveStandingsSnapshot(data);
   setDefaultActiveTeam();
   renderLastUpdated();
   renderActiveView();
   renderOwnership();
+  renderChips();
   scheduleStandingsRefresh();
 }
 
 async function loadStandings(force = false, { quiet = false } = {}) {
   if (isLoadingStandings) return;
   isLoadingStandings = true;
+  updateGameweekControls();
   clearStandingsRefresh();
 
   if (!quiet) {
     refreshButton.disabled = true;
     refreshButton.setAttribute("aria-label", "Refreshing standings");
-    if (gameweekSelect) gameweekSelect.disabled = true;
     status.textContent = "Loading standings…";
   }
 
@@ -1458,23 +1714,24 @@ async function loadStandings(force = false, { quiet = false } = {}) {
     scheduleStandingsRefresh();
   } finally {
     isLoadingStandings = false;
+    updateGameweekControls();
     if (!quiet) {
       refreshButton.disabled = false;
       refreshButton.setAttribute("aria-label", "Refresh standings");
-      if (gameweekSelect) gameweekSelect.disabled = false;
     }
   }
 }
 
 refreshButton.addEventListener("click", () => loadStandings(true));
-gameweekSelect?.addEventListener("change", () => {
-  selectedGameweekId = Number(gameweekSelect.value);
-  loadStandings(false);
-});
+gameweekPreviousButton?.addEventListener("click", () => stepGameweek(-1));
+gameweekNextButton?.addEventListener("click", () => stepGameweek(1));
 document.addEventListener("visibilitychange", refreshStandingsAfterResume);
 window.addEventListener("pageshow", refreshStandingsAfterResume);
 window.addEventListener("focus", refreshStandingsAfterResume);
 themeToggle?.addEventListener("click", toggleTheme);
+mobileTabButtons.forEach((button) => {
+  button.addEventListener("click", () => setMobileTab(button.dataset.mobileTab));
+});
 preferredDarkTheme.addEventListener("change", () => {
   if (!getStoredTheme()) applyTheme(getPreferredTheme(), true);
 });
@@ -1495,6 +1752,7 @@ duoImportanceSelect.addEventListener("change", () => {
 });
 liveOnlyFilter.addEventListener("click", () => {
   liveOnlyImportance = !liveOnlyImportance;
+  liveOnlyImportanceManuallySet = true;
   importancePage = 0;
   renderOwnership();
 });
@@ -1543,6 +1801,7 @@ desktopLayout.addEventListener("change", syncOwnershipHeight);
 hoverLayout.addEventListener("change", closeImportanceDialog);
 mobileLayout.addEventListener("change", () => {
   importancePage = 0;
+  setMobileTab(activeMobileTab, { scroll: false });
   renderOwnership();
 });
 ownershipPanel?.addEventListener("scroll", () => {
@@ -1568,6 +1827,7 @@ document.fonts?.ready.then(() => {
 setInterval(renderLastUpdated, 30_000);
 scheduleHeaderFontScale();
 scheduleStandingsColumnFit();
+setMobileTab(activeMobileTab, { scroll: false });
 const initialStandingsSnapshot = getStandingsSnapshot();
 if (canUseFrozenSnapshot(initialStandingsSnapshot)) {
   renderStandings(initialStandingsSnapshot, { saveSnapshot: false });

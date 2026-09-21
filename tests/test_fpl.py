@@ -310,6 +310,7 @@ class FormatPairsTests(unittest.TestCase):
                 "totalPoints": 100,
                 "inPlay": 2,
                 "toStart": 1,
+                "captainStatus": "inPlay",
                 "chip": "BB",
             },
             {
@@ -320,6 +321,7 @@ class FormatPairsTests(unittest.TestCase):
                 "totalPoints": 200,
                 "inPlay": 3,
                 "toStart": 4,
+                "captainStatus": "toStart",
                 "chip": None,
             },
             {
@@ -330,6 +332,7 @@ class FormatPairsTests(unittest.TestCase):
                 "totalPoints": 120,
                 "inPlay": 0,
                 "toStart": 5,
+                "captainStatus": None,
                 "chip": "TC",
             },
         ]
@@ -350,9 +353,14 @@ class FormatPairsTests(unittest.TestCase):
         self.assertEqual(pairs[1]["totalPoints"], 240)
         self.assertEqual(pairs[1]["inPlay"], 0)
         self.assertEqual(pairs[1]["toStart"], 10)
+        self.assertEqual([member["id"] for member in pairs[0]["members"]], [2, 1])
         self.assertEqual([member["id"] for member in pairs[1]["members"]], [3, 3])
-        self.assertEqual([member["chip"] for member in pairs[0]["members"]], ["BB", None])
+        self.assertEqual([member["chip"] for member in pairs[0]["members"]], [None, "BB"])
         self.assertEqual([member["chip"] for member in pairs[1]["members"]], ["TC", "TC"])
+        self.assertEqual(
+            [member["captainStatus"] for member in pairs[0]["members"]],
+            ["toStart", "inPlay"],
+        )
 
     def test_rejects_a_missing_configured_team(self):
         with self.assertRaisesRegex(RuntimeError, "missing FPL entry 99"):
@@ -405,12 +413,24 @@ class GameweekStatusCountTests(unittest.TestCase):
             1: {
                 "picks": [
                     {"element": 10, "multiplier": 1},
-                    {"element": 20, "multiplier": 1},
+                    {
+                        "element": 20,
+                        "multiplier": 2,
+                        "is_captain": True,
+                    },
                     {"element": 30, "multiplier": 1},
                     {"element": 40, "multiplier": 0},
                 ],
             },
-            2: {"picks": [{"element": 40, "multiplier": 1}]},
+            2: {
+                "picks": [
+                    {
+                        "element": 40,
+                        "multiplier": 2,
+                        "is_captain": True,
+                    }
+                ]
+            },
         }
         elements = [
             {"id": 10, "team": 1},
@@ -434,8 +454,10 @@ class GameweekStatusCountTests(unittest.TestCase):
 
         self.assertEqual(standings[0]["inPlay"], 1)
         self.assertEqual(standings[0]["toStart"], 1)
+        self.assertEqual(standings[0]["captainStatus"], "toStart")
         self.assertEqual(standings[1]["inPlay"], 1)
         self.assertEqual(standings[1]["toStart"], 0)
+        self.assertEqual(standings[1]["captainStatus"], "inPlay")
 
 
 class FormatPlayerOwnershipTests(unittest.TestCase):

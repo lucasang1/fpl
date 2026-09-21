@@ -867,6 +867,7 @@ def _apply_gameweek_status_counts(
     for entry_id, event_data in entry_event_data.items():
         in_play = 0
         to_start = 0
+        captain_status = None
         for pick in event_data.get("picks", []):
             if pick.get("multiplier", 0) <= 0:
                 continue
@@ -875,12 +876,26 @@ def _apply_gameweek_status_counts(
             in_play += player_in_play
             to_start += player_to_start
 
-        counts_by_entry[entry_id] = {"inPlay": in_play, "toStart": to_start}
+            if pick.get("is_captain"):
+                if player_in_play:
+                    captain_status = "inPlay"
+                elif player_to_start:
+                    captain_status = "toStart"
+
+        counts_by_entry[entry_id] = {
+            "inPlay": in_play,
+            "toStart": to_start,
+            "captainStatus": captain_status,
+        }
 
     for team in standings:
-        counts = counts_by_entry.get(team["id"], {"inPlay": 0, "toStart": 0})
+        counts = counts_by_entry.get(
+            team["id"],
+            {"inPlay": 0, "toStart": 0, "captainStatus": None},
+        )
         team["inPlay"] = counts["inPlay"]
         team["toStart"] = counts["toStart"]
+        team["captainStatus"] = counts["captainStatus"]
 
 
 def _apply_live_gameweek_points(
@@ -991,6 +1006,15 @@ def _format_pairs(
             raise RuntimeError(f"Pair {name} is missing FPL entry {missing_ids[0]}")
 
         members = [teams_by_id[entry_id] for entry_id in entry_ids]
+        members.sort(
+            key=lambda member: (
+                isinstance(member["totalPoints"], int | float),
+                member["totalPoints"]
+                if isinstance(member["totalPoints"], int | float)
+                else 0,
+            ),
+            reverse=True,
+        )
 
         def combined(field: str) -> int | str:
             values = [member[field] for member in members]

@@ -63,6 +63,14 @@ const themeTransitionDuration = 1120;
 let themeTransitionTimer;
 let activeMobileTab = "league";
 
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js").catch(() => {
+      // The app remains usable if service workers are unavailable or blocked.
+    });
+  });
+}
+
 function getStoredTheme() {
   try {
     const theme = localStorage.getItem(themeStorageKey);

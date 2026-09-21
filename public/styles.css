@@ -2090,6 +2090,19 @@ a:hover { color: var(--muted); }
 
 }
 
+@media (display-mode: standalone) and (max-width: 700px) {
+  .mobile-tab-bar::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: env(safe-area-inset-bottom);
+    background: var(--bg);
+    content: "";
+    pointer-events: none;
+  }
+}
+
 /* Hide Duo column in Individual view */
 .view-individual .standings-table col.col-gw-total,
 .view-individual .standings-table th:nth-child(6),

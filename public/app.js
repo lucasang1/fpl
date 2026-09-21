@@ -180,7 +180,7 @@ function measureHeaderFontSizes() {
 function getHeaderScale(scrollPosition) {
   const scrollRange = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
   const progress = scrollRange ? Math.min(1, Math.max(0, scrollPosition / scrollRange)) : 0;
-  return 1 - Math.min(progress, 0.5);
+  return 0.75 - Math.min(progress, 0.5) * 0.5;
 }
 
 function applyHeaderFontScale(scale) {

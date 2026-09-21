@@ -1761,7 +1761,7 @@ a:hover { color: var(--muted); }
   }
 
   .top-bar {
-    margin: 0 -12px 6px;
+    margin: 0 -12px 0;
     padding: 10px 12px;
     gap: 4px;
   }

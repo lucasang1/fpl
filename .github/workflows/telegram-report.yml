@@ -62,5 +62,5 @@ jobs:
           report_key=$(basename "$marker" .json)
           next_check=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["nextCheckEpoch"])' "$marker")
           tag="telegram-report-${report_key}-next-${next_check}"
-          git tag -a "$tag" -m "Telegram report sent for ${report_key}"
+          git tag "$tag"
           git push origin "$tag"

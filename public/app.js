@@ -12,6 +12,7 @@ const gameweekValues = [...document.querySelectorAll("[data-gameweek-value]")];
 const pairsViewButton = document.querySelector("#pairs-view");
 const teamsViewButton = document.querySelector("#teams-view");
 const standingsCard = document.querySelector(".table-wrap");
+const standingsTable = document.querySelector(".standings-table");
 const chipsList = document.querySelector("#chips-list");
 const transfersList = document.querySelector("#transfers-list");
 const teamDetail = document.querySelector("#team-detail");
@@ -192,7 +193,7 @@ function scheduleHeaderFontScale() {
 
 function fitStandingsColumns() {
   teamColumnFitFrame = undefined;
-  const table = document.querySelector(".standings-table");
+  const table = standingsTable;
   if (!table || !tbody) return;
 
   const canvas = fitStandingsColumns.canvas || document.createElement("canvas");
@@ -234,6 +235,10 @@ function fitStandingsColumns() {
   if (widestTeamCell > 0) {
     const desktopTeamWidth = Math.ceil(widestTeamCell * 1.2);
     table.style.setProperty("--team-col-width", `${desktopLayout.matches ? desktopTeamWidth : widestTeamCell}px`);
+  }
+
+  if (widestRankCell > 0 && widestTeamCell > 0) {
+    table.classList.add("standings-columns-ready");
   }
 }
 
@@ -1413,6 +1418,7 @@ function renderActiveView() {
   pairsViewButton.setAttribute("aria-pressed", String(isPairs));
   teamsViewButton.setAttribute("aria-pressed", String(!isPairs));
   standingsCard.classList.toggle("view-individual", !isPairs);
+  standingsTable?.classList.remove("standings-columns-ready");
   tbody.replaceChildren(
     ...(isPairs ? standingsData.pairs.map(createPairRow) : standingsData.standings.map(createTeamRow)),
   );

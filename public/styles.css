@@ -501,6 +501,11 @@ th, td {
   --rank-col-width: 44px;
   --team-col-width: 30.8%;
   --standings-col-width: calc((100% - var(--rank-col-width) - var(--team-col-width)) / 4);
+  visibility: hidden;
+}
+
+.standings-table.standings-columns-ready {
+  visibility: visible;
 }
 
 .standings-table .col-rank { width: var(--rank-col-width); }

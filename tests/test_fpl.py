@@ -8,6 +8,7 @@ from services.fpl import (
     _apply_gameweek_status_counts,
     _apply_rank_movements,
     _calculate_banked_fts,
+    _count_net_changes,
     _format_duo_importance,
     _format_pairs,
     _format_player_ownership,
@@ -64,6 +65,18 @@ class BankedFreeTransfersTests(unittest.TestCase):
                 json.dumps(snapshots[2]), encoding="utf-8"
             )
             self.assertEqual(_previous_banked_fts(snapshot_dir, 4), {10: 4})
+
+
+class NetTransferChangesTests(unittest.TestCase):
+    def test_counts_only_the_final_squad_changes(self):
+        transfers = [
+            {"event": 4, "element_out": 1, "element_in": 2},
+            {"event": 4, "element_out": 2, "element_in": 3},
+            {"event": 4, "element_out": 4, "element_in": 5},
+            {"event": 3, "element_out": 6, "element_in": 7},
+        ]
+
+        self.assertEqual(_count_net_changes(transfers, 4), 2)
 
 
 class FormatPointDetailsTests(unittest.TestCase):
@@ -819,6 +832,7 @@ class FormatTeamDetailsTests(unittest.TestCase):
 
         self.assertEqual(details[0]["team"], "Alpha")
         self.assertEqual(details[0]["transfersMade"], 2)
+        self.assertEqual(details[0]["netChanges"], 2)
         self.assertEqual(details[0]["transferCost"], 4)
         self.assertEqual(
             details[0]["transfers"],

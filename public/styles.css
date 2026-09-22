@@ -120,10 +120,6 @@ main {
     grid-column: 1 / -1;
   }
 
-  main > .standings-gameweek {
-    grid-column: 1 / -1;
-  }
-
   main > .ownership-panel {
     grid-column: 2;
     align-self: stretch;
@@ -154,6 +150,10 @@ main {
   .team-detail > .team-detail-header {
     margin-bottom: 0;
     margin-inline: 0;
+  }
+
+  .team-detail-stats {
+    margin-top: 3px;
   }
 
   .table-toolbar {
@@ -413,7 +413,7 @@ button:disabled { cursor: wait; opacity: .65; }
 }
 
 .standings-gameweek {
-  display: flex;
+  display: none;
 }
 
 .mobile-team-gameweek {
@@ -1159,6 +1159,11 @@ a:hover { color: var(--muted); }
   height: 1.1rem;
 }
 
+.team-detail-placeholder-stat {
+  width: 70px;
+  height: .75rem;
+}
+
 .team-detail-placeholder-row {
   grid-column: 1 / -1;
   height: 30px;
@@ -1292,6 +1297,62 @@ a:hover { color: var(--muted); }
   line-height: 1;
 }
 
+.team-detail-stats {
+  --team-detail-stats-font-size: .75rem;
+
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 6px 14px;
+  align-items: baseline;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 5px;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.team-detail-stat {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  align-items: baseline;
+  min-width: 0;
+  font-size: var(--team-detail-stats-font-size);
+  line-height: 1.25;
+}
+
+.team-detail-stat span {
+  color: var(--muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.team-detail-stat strong {
+  overflow: hidden;
+  color: var(--strong);
+  font-size: inherit;
+  line-height: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-hover-stat {
+  cursor: help;
+}
+
+.team-hover-stat:hover strong,
+.team-hover-stat:focus-visible strong {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.team-hover-stat:focus-visible {
+  outline: 2px solid var(--strong);
+  outline-offset: 3px;
+}
+
 .team-player-list {
   --ownership-columns: minmax(90px, 1fr) minmax(5ch, max-content) minmax(6ch, max-content) minmax(5ch, max-content);
 }
@@ -1353,6 +1414,25 @@ a:hover { color: var(--muted); }
 
 .importance-dialog-hover .importance-dialog-header {
   display: none;
+}
+
+.transfer-dialog {
+  z-index: 20;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+}
+
+.transfer-dialog[hidden] {
+  display: none;
+}
+
+.transfer-dialog .importance-dialog-body {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.transfer-dialog li {
+  white-space: nowrap;
 }
 
 .importance-dialog-header {
@@ -1508,6 +1588,14 @@ a:hover { color: var(--muted); }
   }
 
   main:not([data-mobile-tab="league"]) > .standings-gameweek {
+    display: none;
+  }
+
+  main[data-mobile-tab="league"] > .standings-gameweek {
+    display: flex;
+  }
+
+  .desktop-gameweek {
     display: none;
   }
 
@@ -2081,6 +2169,10 @@ a:hover { color: var(--muted); }
 
   .team-detail-gw-score strong {
     font-size: .82rem;
+  }
+
+  .team-detail-stats {
+    display: none;
   }
 
 

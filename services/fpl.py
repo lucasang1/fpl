@@ -1,6 +1,6 @@
 import json
 import ssl
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -718,6 +718,24 @@ def _format_transfers(
     return formatted
 
 
+def _count_net_changes(
+    transfers: Iterable[JsonObject], gameweek_id: int
+) -> int:
+    player_changes: Counter[int] = Counter()
+    for transfer in transfers:
+        if transfer.get("event") != gameweek_id:
+            continue
+
+        player_in_id = transfer.get("element_in")
+        player_out_id = transfer.get("element_out")
+        if isinstance(player_in_id, int):
+            player_changes[player_in_id] += 1
+        if isinstance(player_out_id, int):
+            player_changes[player_out_id] -= 1
+
+    return sum(change for change in player_changes.values() if change > 0)
+
+
 def _format_team_details(
     standings: Iterable[JsonObject],
     entry_event_data: dict[int, JsonObject],
@@ -767,6 +785,7 @@ def _format_team_details(
         event_data = entry_event_data.get(entry_id, {})
         entry_history = event_data.get("entry_history", {})
         event_picks = event_data.get("picks", [])
+        entry_transfers = transfer_data.get(entry_id, [])
         chip = CHIP_LABELS.get(event_data.get("active_chip"))
         transfers_made = entry_history.get("event_transfers", 0)
         comparison = [
@@ -832,6 +851,7 @@ def _format_team_details(
                 "gameweekPoints": team["gameweekPoints"],
                 "totalPoints": team["totalPoints"],
                 "transfersMade": transfers_made,
+                "netChanges": _count_net_changes(entry_transfers, gameweek_id),
                 "bankedFTs": _calculate_banked_fts(
                     previous_banked_fts.get(entry_id, 0),
                     transfers_made,
@@ -840,7 +860,7 @@ def _format_team_details(
                 ),
                 "transferCost": entry_history.get("event_transfers_cost", 0),
                 "transfers": _format_transfers(
-                    transfer_data.get(entry_id, []),
+                    entry_transfers,
                     gameweek_id,
                     players,
                     live_points,

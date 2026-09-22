@@ -31,6 +31,8 @@ const importanceDialogBody = document.querySelector("#importance-dialog-body");
 const importanceDialogClose = document.querySelector("#importance-dialog-close");
 const themeToggle = document.querySelector("#theme-toggle");
 const mobileTabButtons = [...document.querySelectorAll(".mobile-tab")];
+const transferDialog = document.createElement("div");
+const transferDialogBody = document.createElement("div");
 let standingsData;
 let currentGameweekData;
 let activeView = "pairs";
@@ -42,6 +44,7 @@ let liveOnlyImportanceManuallySet = false;
 let updatedAt;
 let activeImportanceAnchor;
 let activeImportanceMode = "modal";
+let activeTransferAnchor;
 let importancePage = 0;
 const importancePageSize = 14;
 let standingsRefreshTimer;
@@ -52,6 +55,8 @@ let availableGameweeks = [];
 let headerBaseFontSizes = [];
 let headerScaleFrame;
 let teamColumnFitFrame;
+let teamStatsFitFrame;
+let transferCloseTimer;
 const desktopLayout = window.matchMedia("(min-width: 901px)");
 const mobileLayout = window.matchMedia("(max-width: 700px)");
 const hoverLayout = window.matchMedia("(hover: hover) and (pointer: fine)");
@@ -62,6 +67,14 @@ const standingsStorageKey = "fpl:standingsSnapshot:v2";
 const themeTransitionDuration = 1120;
 let themeTransitionTimer;
 let activeMobileTab = "league";
+
+transferDialog.id = "transfer-dialog";
+transferDialog.className = "importance-dialog transfer-dialog";
+transferDialog.hidden = true;
+transferDialog.setAttribute("role", "tooltip");
+transferDialogBody.className = "importance-dialog-body";
+transferDialog.append(transferDialogBody);
+document.body.append(transferDialog);
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
@@ -309,6 +322,46 @@ const POINT_DETAIL_LABELS = {
 
 function pluralize(singular, count, plural = `${singular}s`) {
   return count === 1 ? singular : plural;
+}
+
+function teamStatsFit(stats) {
+  const statsRect = stats.getBoundingClientRect();
+  const statRects = Array.from(stats.children)
+    .filter((stat) => stat.getClientRects().length > 0)
+    .map((stat) => stat.getBoundingClientRect());
+  if (!statRects.length || !statsRect.width) return true;
+
+  const left = Math.min(...statRects.map((rect) => rect.left));
+  const right = Math.max(...statRects.map((rect) => rect.right));
+  return left >= statsRect.left - 0.5 && right <= statsRect.right + 0.5;
+}
+
+function maximizeTeamStatsFont(stats) {
+  const minimumFontSize = 1;
+  const maximumFontSize = parseFloat(getComputedStyle(stats.firstElementChild).fontSize);
+  let low = minimumFontSize;
+  let high = maximumFontSize;
+
+  stats.style.setProperty("--team-detail-stats-font-size", `${minimumFontSize}px`);
+  for (let iteration = 0; iteration < 8; iteration += 1) {
+    const candidate = (low + high) / 2;
+    stats.style.setProperty("--team-detail-stats-font-size", `${candidate}px`);
+    if (teamStatsFit(stats)) low = candidate;
+    else high = candidate;
+  }
+  stats.style.setProperty("--team-detail-stats-font-size", `${low}px`);
+}
+
+function fitTeamDetailStats() {
+  const stats = teamDetail?.querySelector(".team-detail-stats");
+  if (!stats || mobileLayout.matches) return;
+  stats.style.removeProperty("--team-detail-stats-font-size");
+  maximizeTeamStatsFont(stats);
+}
+
+function scheduleTeamStatsFit() {
+  cancelAnimationFrame(teamStatsFitFrame);
+  teamStatsFitFrame = requestAnimationFrame(fitTeamDetailStats);
 }
 
 function getSavedTeamId() {
@@ -887,6 +940,18 @@ function formatNetDiff(transfers) {
   return `${net > 0 ? "+" : ""}${net}`;
 }
 
+function countNetChanges(transfers) {
+  const playerChanges = new Map();
+  for (const transfer of transfers) {
+    playerChanges.set(transfer.in, (playerChanges.get(transfer.in) || 0) + 1);
+    playerChanges.set(transfer.out, (playerChanges.get(transfer.out) || 0) - 1);
+  }
+  return [...playerChanges.values()].reduce(
+    (total, change) => total + Math.max(0, change),
+    0,
+  );
+}
+
 function createTransfersRow(team, data = standingsData) {
   const row = document.createElement("div");
   const name = document.createElement("span");
@@ -904,11 +969,13 @@ function createTransfersRow(team, data = standingsData) {
   name.className = "chips-team-name";
   name.textContent = team.team;
   made.className = "stats-transfer-number";
-  made.textContent = chipLabel ? "—" : formatStatValue(detail?.transfersMade ?? 0);
+  made.textContent = detail?.chip === "WC"
+    ? formatStatValue(detail?.netChanges ?? countNetChanges(transfers))
+    : (detail?.chip === "FH" ? "—" : formatStatValue(detail?.transfersMade ?? 0));
   banked.className = "stats-transfer-number";
   banked.textContent = formatStatValue(detail?.bankedFTs ?? "—");
   net.className = "stats-transfer-number";
-  net.textContent = chipLabel ? "—" : formatNetDiff(transfers);
+  net.textContent = formatNetDiff(transfers);
   details.className = "stats-transfer-value";
   if (chipLabel) {
     details.textContent = chipLabel;
@@ -1266,6 +1333,37 @@ function createTeamValueSummary(detail) {
   return values;
 }
 
+function createTeamStat(label, value) {
+  const stat = document.createElement("div");
+  const statLabel = document.createElement("span");
+  const statValue = document.createElement("strong");
+
+  stat.className = "team-detail-stat";
+  statLabel.textContent = label;
+  statValue.textContent = formatStatValue(value);
+  stat.append(statLabel, statValue);
+  return stat;
+}
+
+function createTransferStat(detail) {
+  return createHoverStat(
+    createTeamStat("Transfers", formatTransfers(detail.transfersMade, detail.transferCost)),
+    () => createTransferList(detail),
+  );
+}
+
+function createChipStat(detail) {
+  const stat = createTeamStat("Chip", formatChipName(detail.chip));
+  stat.classList.add("team-detail-chip-stat");
+  return createHoverStat(stat, () => createChipDetails(detail));
+}
+
+function createValueStat(detail) {
+  const stat = createTeamStat("Total Value", formatTeamValue(detail.teamValue));
+  stat.classList.add("team-detail-value-stat");
+  return createHoverStat(stat, () => createValueDetails(detail));
+}
+
 function renderTeamSummary(detail, standingsTeam) {
   if (!teamSummaryPanel) return;
   teamSummaryPanel.hidden = false;
@@ -1273,6 +1371,30 @@ function renderTeamSummary(detail, standingsTeam) {
     createTeamValueSummary(detail),
     createChipsRow(standingsTeam, { showTeamName: false }),
   );
+}
+
+function createHoverStat(stat, createContent) {
+  const open = () => openTransferDialog(createContent, stat);
+  const close = () => scheduleCloseTransferDialog();
+  const openOnHover = () => {
+    if (hoverLayout.matches) open();
+  };
+  const closeOnHover = () => {
+    if (hoverLayout.matches) close();
+  };
+
+  stat.classList.add("team-hover-stat");
+  stat.tabIndex = 0;
+  stat.setAttribute("aria-describedby", transferDialog.id);
+  stat.addEventListener("mouseenter", openOnHover);
+  stat.addEventListener("focus", openOnHover);
+  stat.addEventListener("mouseleave", closeOnHover);
+  stat.addEventListener("blur", closeOnHover);
+  stat.addEventListener("click", () => {
+    if (activeTransferAnchor === stat && !transferDialog.hidden) closeTransferDialog();
+    else open();
+  });
+  return stat;
 }
 
 function createGameweekScore(points) {
@@ -1328,6 +1450,106 @@ function findStandingsTeam(teamId) {
   return (standingsData?.standings || []).find((team) => team.id === teamId);
 }
 
+function formatTransfers(transfersMade, transferCost) {
+  const transfers = formatStatValue(transfersMade);
+  return transferCost > 0 ? `${transfers} (-${transferCost})` : transfers;
+}
+
+function createTransferList(detail) {
+  const section = document.createElement("section");
+  const transfers = detail.transfers || [];
+  if (!transfers.length) {
+    const empty = document.createElement("p");
+    empty.textContent = detail.transfersMade > 0
+      ? "Transfer details unavailable"
+      : "No transfers made";
+    section.append(empty);
+    return section;
+  }
+
+  const list = document.createElement("ul");
+  for (const transfer of transfers) {
+    const item = document.createElement("li");
+    item.textContent = `${transfer.out} -> ${transfer.in}`;
+    list.append(item);
+  }
+  section.append(list);
+  return section;
+}
+
+function createChipDetails(detail) {
+  const section = document.createElement("section");
+  const chipsPlayed = Array.isArray(detail.chipsPlayed)
+    ? detail.chipsPlayed
+    : (detail.chip ? [{ chip: detail.chip }] : []);
+  if (!chipsPlayed.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "Chips played: -";
+    section.append(empty);
+    return section;
+  }
+
+  const list = document.createElement("ul");
+  for (const played of chipsPlayed) {
+    const item = document.createElement("li");
+    const gameweek = Number.isFinite(played.event) ? `GW${played.event} ` : "";
+    item.textContent = `${gameweek}${formatChipName(played.chip)}`;
+    list.append(item);
+  }
+  section.append(list);
+  return section;
+}
+
+function createValueDetails(detail) {
+  const section = document.createElement("section");
+  const team = document.createElement("p");
+  const bank = document.createElement("p");
+  team.textContent = `Team: ${formatTeamValue(detail.teamValue - detail.bank)}`;
+  bank.textContent = `Bank: ${formatTeamValue(detail.bank)}`;
+  section.append(team, bank);
+  return section;
+}
+
+function positionTransferDialog(anchor) {
+  if (transferDialog.hidden || !anchor) return;
+  const spacing = 8;
+  const viewportPadding = 12;
+  const anchorRect = anchor.getBoundingClientRect();
+  const dialogWidth = transferDialog.offsetWidth;
+  const dialogHeight = transferDialog.offsetHeight;
+  const maxLeft = window.innerWidth - dialogWidth - viewportPadding;
+  const belowTop = anchorRect.bottom + spacing;
+  const aboveTop = anchorRect.top - dialogHeight - spacing;
+  const left = Math.max(
+    viewportPadding,
+    Math.min(anchorRect.left + (anchorRect.width - dialogWidth) / 2, maxLeft),
+  );
+  const top = belowTop + dialogHeight <= window.innerHeight - viewportPadding
+    ? belowTop
+    : Math.max(viewportPadding, aboveTop);
+  transferDialog.style.left = `${left}px`;
+  transferDialog.style.top = `${top}px`;
+}
+
+function openTransferDialog(createContent, anchor) {
+  clearTimeout(transferCloseTimer);
+  activeTransferAnchor = anchor;
+  transferDialogBody.replaceChildren(createContent());
+  transferDialog.hidden = false;
+  positionTransferDialog(anchor);
+}
+
+function scheduleCloseTransferDialog() {
+  clearTimeout(transferCloseTimer);
+  transferCloseTimer = setTimeout(closeTransferDialog, 120);
+}
+
+function closeTransferDialog() {
+  clearTimeout(transferCloseTimer);
+  transferDialog.hidden = true;
+  activeTransferAnchor = undefined;
+}
+
 function renderTeamDetail() {
   if (!teamDetail || activeTeamId === undefined) return;
 
@@ -1337,6 +1559,7 @@ function renderTeamDetail() {
   const detail = findTeamDetail(activeTeamId);
   const standingsTeam = findStandingsTeam(activeTeamId);
   if (!detail || !standingsTeam) {
+    closeTransferDialog();
     teamDetail.replaceChildren();
     if (teamSummaryPanel) {
       teamSummaryPanel.hidden = true;
@@ -1345,11 +1568,15 @@ function renderTeamDetail() {
     return;
   }
 
+  closeTransferDialog();
+
   const header = document.createElement("div");
   const titleGroup = document.createElement("div");
   const titleText = document.createElement("div");
   const teamName = createTeamDetailTeamSelect(detail);
   const gameweekScore = createGameweekScore(detail.gameweekPoints);
+  const stats = document.createElement("div");
+  const totalPointsStat = createTeamStat("Total Points", detail.totalPoints);
   const players = document.createElement("div");
 
   header.className = "team-detail-header";
@@ -1357,7 +1584,16 @@ function renderTeamDetail() {
   titleGroup.className = "team-detail-title";
   titleText.className = "team-detail-title-text";
 
-  titleText.append(teamName);
+  stats.className = "team-detail-stats";
+  totalPointsStat.classList.add("team-detail-total-points-stat");
+  stats.append(
+    totalPointsStat,
+    createTransferStat(detail),
+    createChipStat(detail),
+    createValueStat(detail),
+  );
+
+  titleText.append(teamName, stats);
   titleGroup.append(createTeamCardImage(standingsTeam), titleText);
 
   header.append(titleGroup, gameweekScore);
@@ -1370,6 +1606,7 @@ function renderTeamDetail() {
 
   teamDetail.replaceChildren(header, players);
   renderTeamSummary(detail, standingsTeam);
+  scheduleTeamStatsFit();
   syncOwnershipHeight();
 }
 
@@ -1680,22 +1917,29 @@ document.addEventListener("click", (event) => {
 importanceDialog.addEventListener("close", () => {
   activeImportanceAnchor = undefined;
 });
+transferDialog.addEventListener("mouseenter", () => clearTimeout(transferCloseTimer));
+transferDialog.addEventListener("mouseleave", scheduleCloseTransferDialog);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeImportanceDialog();
+  if (event.key === "Escape") closeTransferDialog();
 });
 window.addEventListener("scroll", () => {
   scheduleHeaderFontScale();
   positionImportanceDialog(activeImportanceAnchor);
+  positionTransferDialog(activeTransferAnchor);
 }, { passive: true });
 window.addEventListener("resize", () => {
   positionImportanceDialog(activeImportanceAnchor);
+  positionTransferDialog(activeTransferAnchor);
   scheduleStandingsColumnFit();
+  scheduleTeamStatsFit();
   resetHeaderFontScale();
 });
 desktopLayout.addEventListener("change", syncOwnershipHeight);
 hoverLayout.addEventListener("change", closeImportanceDialog);
 mobileLayout.addEventListener("change", () => {
   importancePage = 0;
+  closeTransferDialog();
   setMobileTab(activeMobileTab, { scroll: false });
   renderOwnership();
 });
@@ -1710,10 +1954,12 @@ if (standingsCard) {
 }
 if (teamDetail) {
   new ResizeObserver(() => {
+    scheduleTeamStatsFit();
     syncOwnershipHeight();
   }).observe(teamDetail);
 }
 document.fonts?.ready.then(() => {
+  scheduleTeamStatsFit();
   scheduleStandingsColumnFit();
   resetHeaderFontScale();
 });

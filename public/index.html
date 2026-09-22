@@ -35,6 +35,21 @@
             <button id="teams-view" type="button" aria-pressed="false">Individual</button>
           </div>
           <div class="refresh-group">
+            <div class="desktop-gameweek" aria-label="Standings gameweek selection">
+              <div class="gameweek-stepper" role="group" aria-label="Gameweek selection">
+                <button data-gameweek-previous type="button" aria-label="Previous gameweek" title="Previous gameweek" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m15 18-6-6 6-6"></path>
+                  </svg>
+                </button>
+                <input class="gameweek-value" data-gameweek-value type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" aria-label="Gameweek number" disabled>
+                <button data-gameweek-next type="button" aria-label="Next gameweek" title="Next gameweek" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m9 18 6-6-6-6"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
             <p id="last-updated" aria-live="off" hidden></p>
             <button id="refresh" type="button" aria-label="Refresh standings" title="Refresh standings" hidden>
               <svg class="refresh-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -93,6 +108,11 @@
             <span class="team-detail-placeholder team-detail-placeholder-badge"></span>
             <div class="team-detail-title-text">
               <span class="team-detail-placeholder team-detail-placeholder-title"></span>
+              <div class="team-detail-stats">
+                <span class="team-detail-placeholder team-detail-placeholder-stat"></span>
+                <span class="team-detail-placeholder team-detail-placeholder-stat"></span>
+                <span class="team-detail-placeholder team-detail-placeholder-stat"></span>
+              </div>
             </div>
           </div>
           <span class="team-detail-placeholder team-detail-placeholder-score"></span>

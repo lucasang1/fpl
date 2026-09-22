@@ -33,7 +33,7 @@
       "name": "Gameweek 1"
     }
   ],
-  "updatedAt": "2026-09-21T07:57:48.758905+00:00",
+  "updatedAt": "2026-09-22T03:44:44.539527+00:00",
   "teamCardImage": "badge",
   "refreshPolicy": {
     "mode": "frozen",
@@ -107,8 +107,8 @@
       "rank": 4,
       "team": "LUC PRIME",
       "manager": "lucas ang",
-      "gameweekPoints": 36,
-      "totalPoints": 350,
+      "gameweekPoints": 38,
+      "totalPoints": 352,
       "url": "https://fantasy.premierleague.com/entry/2020069/event/5",
       "badgeUrl": "https://fantasy.premierleague.com/gcs/plfpl-production-adobe-approved/plfpl-production/8157993/6e0f63b9-b056-4f19-8761-3ab265ce4539.png",
       "headshotUrl": "/headshots/lucas.png",
@@ -207,8 +207,8 @@
       "rank": 9,
       "team": "Swiping Fatties",
       "manager": "giga swipers",
-      "gameweekPoints": 41,
-      "totalPoints": 307,
+      "gameweekPoints": 43,
+      "totalPoints": 309,
       "url": "https://fantasy.premierleague.com/entry/3425313/event/5",
       "badgeUrl": "https://fantasy.premierleague.com/gcs/plfpl-production-adobe-approved/plfpl-production/3425313/a78de9a2-f69b-4c62-8f61-ba8d8e23c2ea.png",
       "headshotUrl": "/headshots/syuaib.png",
@@ -307,8 +307,8 @@
           "rank": 4,
           "team": "LUC PRIME",
           "manager": "lucas ang",
-          "gameweekPoints": 36,
-          "totalPoints": 350,
+          "gameweekPoints": 38,
+          "totalPoints": 352,
           "url": "https://fantasy.premierleague.com/entry/2020069/event/5",
           "badgeUrl": "https://fantasy.premierleague.com/gcs/plfpl-production-adobe-approved/plfpl-production/8157993/6e0f63b9-b056-4f19-8761-3ab265ce4539.png",
           "headshotUrl": "/headshots/lucas.png",
@@ -323,8 +323,8 @@
           }
         }
       ],
-      "gameweekPoints": 101,
-      "totalPoints": 738,
+      "gameweekPoints": 103,
+      "totalPoints": 740,
       "inPlay": 0,
       "toStart": 0,
       "rank": 2,
@@ -472,8 +472,8 @@
           "rank": 9,
           "team": "Swiping Fatties",
           "manager": "giga swipers",
-          "gameweekPoints": 41,
-          "totalPoints": 307,
+          "gameweekPoints": 43,
+          "totalPoints": 309,
           "url": "https://fantasy.premierleague.com/entry/3425313/event/5",
           "badgeUrl": "https://fantasy.premierleague.com/gcs/plfpl-production-adobe-approved/plfpl-production/3425313/a78de9a2-f69b-4c62-8f61-ba8d8e23c2ea.png",
           "headshotUrl": "/headshots/syuaib.png",
@@ -488,8 +488,8 @@
           }
         }
       ],
-      "gameweekPoints": 83,
-      "totalPoints": 652,
+      "gameweekPoints": 85,
+      "totalPoints": 654,
       "inPlay": 0,
       "toStart": 0,
       "rank": 5,
@@ -1283,6 +1283,38 @@
           }
         },
         {
+          "id": 165,
+          "name": "João Pedro",
+          "teamCode": 8,
+          "opponent": "BRE (A)",
+          "fixtureTime": "Done",
+          "points": 0,
+          "matchStatus": null,
+          "isLive": false,
+          "pointDetails": null,
+          "importance": 0.0,
+          "teams": {
+            "started": [],
+            "benched": [
+              {
+                "name": "maubeefcherkii"
+              },
+              {
+                "name": "joshur10"
+              },
+              {
+                "name": "LUC PRIME"
+              },
+              {
+                "name": "Change Name"
+              },
+              {
+                "name": "Swiping Fatties"
+              }
+            ]
+          }
+        },
+        {
           "id": 268,
           "name": "King",
           "teamCode": 54,
@@ -1441,43 +1473,6 @@
               }
             ],
             "benched": []
-          }
-        },
-        {
-          "id": 423,
-          "name": "Shaw",
-          "teamCode": 1,
-          "opponent": "FUL (A)",
-          "fixtureTime": "Done",
-          "points": 2,
-          "matchStatus": null,
-          "isLive": false,
-          "pointDetails": {
-            "rows": [
-              {
-                "identifier": "defensive_contribution",
-                "value": 3,
-                "points": 0
-              },
-              {
-                "identifier": "minutes",
-                "value": 83,
-                "points": 2
-              }
-            ],
-            "total": 2
-          },
-          "importance": 0.0,
-          "teams": {
-            "started": [],
-            "benched": [
-              {
-                "name": "LUC PRIME"
-              },
-              {
-                "name": "Swiping Fatties"
-              }
-            ]
           }
         },
         {
@@ -2262,15 +2257,29 @@
           }
         },
         {
-          "id": 165,
-          "name": "João Pedro",
-          "teamCode": 8,
-          "opponent": "BRE (A)",
+          "id": 423,
+          "name": "Shaw",
+          "teamCode": 1,
+          "opponent": "FUL (A)",
           "fixtureTime": "Done",
-          "points": 0,
+          "points": 2,
           "matchStatus": null,
           "isLive": false,
-          "pointDetails": null,
+          "pointDetails": {
+            "rows": [
+              {
+                "identifier": "defensive_contribution",
+                "value": 3,
+                "points": 0
+              },
+              {
+                "identifier": "minutes",
+                "value": 83,
+                "points": 2
+              }
+            ],
+            "total": 2
+          },
           "importance": -50.0,
           "teams": {
             "started": [
@@ -2283,17 +2292,7 @@
                 "captain": false
               }
             ],
-            "benched": [
-              {
-                "name": "maubeefcherkii"
-              },
-              {
-                "name": "joshur10"
-              },
-              {
-                "name": "Change Name"
-              }
-            ]
+            "benched": []
           }
         },
         {
@@ -2981,15 +2980,29 @@
           }
         },
         {
-          "id": 165,
-          "name": "João Pedro",
-          "teamCode": 8,
-          "opponent": "BRE (A)",
+          "id": 423,
+          "name": "Shaw",
+          "teamCode": 1,
+          "opponent": "FUL (A)",
           "fixtureTime": "Done",
-          "points": 0,
+          "points": 2,
           "matchStatus": null,
           "isLive": false,
-          "pointDetails": null,
+          "pointDetails": {
+            "rows": [
+              {
+                "identifier": "defensive_contribution",
+                "value": 3,
+                "points": 0
+              },
+              {
+                "identifier": "minutes",
+                "value": 83,
+                "points": 2
+              }
+            ],
+            "total": 2
+          },
           "importance": 75.0,
           "teams": {
             "started": [
@@ -3002,17 +3015,7 @@
                 "captain": false
               }
             ],
-            "benched": [
-              {
-                "name": "maubeefcherkii"
-              },
-              {
-                "name": "joshur10"
-              },
-              {
-                "name": "Change Name"
-              }
-            ]
+            "benched": []
           }
         },
         {
@@ -3709,6 +3712,38 @@
           }
         },
         {
+          "id": 165,
+          "name": "João Pedro",
+          "teamCode": 8,
+          "opponent": "BRE (A)",
+          "fixtureTime": "Done",
+          "points": 0,
+          "matchStatus": null,
+          "isLive": false,
+          "pointDetails": null,
+          "importance": 0.0,
+          "teams": {
+            "started": [],
+            "benched": [
+              {
+                "name": "maubeefcherkii"
+              },
+              {
+                "name": "joshur10"
+              },
+              {
+                "name": "LUC PRIME"
+              },
+              {
+                "name": "Change Name"
+              },
+              {
+                "name": "Swiping Fatties"
+              }
+            ]
+          }
+        },
+        {
           "id": 268,
           "name": "King",
           "teamCode": 54,
@@ -3987,43 +4022,6 @@
               }
             ],
             "benched": []
-          }
-        },
-        {
-          "id": 423,
-          "name": "Shaw",
-          "teamCode": 1,
-          "opponent": "FUL (A)",
-          "fixtureTime": "Done",
-          "points": 2,
-          "matchStatus": null,
-          "isLive": false,
-          "pointDetails": {
-            "rows": [
-              {
-                "identifier": "defensive_contribution",
-                "value": 3,
-                "points": 0
-              },
-              {
-                "identifier": "minutes",
-                "value": 83,
-                "points": 2
-              }
-            ],
-            "total": 2
-          },
-          "importance": 0.0,
-          "teams": {
-            "started": [],
-            "benched": [
-              {
-                "name": "LUC PRIME"
-              },
-              {
-                "name": "Swiping Fatties"
-              }
-            ]
           }
         },
         {
@@ -5764,6 +5762,38 @@
           }
         },
         {
+          "id": 165,
+          "name": "João Pedro",
+          "teamCode": 8,
+          "opponent": "BRE (A)",
+          "fixtureTime": "Done",
+          "points": 0,
+          "matchStatus": null,
+          "isLive": false,
+          "pointDetails": null,
+          "importance": 0.0,
+          "teams": {
+            "started": [],
+            "benched": [
+              {
+                "name": "maubeefcherkii"
+              },
+              {
+                "name": "joshur10"
+              },
+              {
+                "name": "LUC PRIME"
+              },
+              {
+                "name": "Change Name"
+              },
+              {
+                "name": "Swiping Fatties"
+              }
+            ]
+          }
+        },
+        {
           "id": 268,
           "name": "King",
           "teamCode": 54,
@@ -6033,43 +6063,6 @@
               }
             ],
             "benched": []
-          }
-        },
-        {
-          "id": 423,
-          "name": "Shaw",
-          "teamCode": 1,
-          "opponent": "FUL (A)",
-          "fixtureTime": "Done",
-          "points": 2,
-          "matchStatus": null,
-          "isLive": false,
-          "pointDetails": {
-            "rows": [
-              {
-                "identifier": "defensive_contribution",
-                "value": 3,
-                "points": 0
-              },
-              {
-                "identifier": "minutes",
-                "value": 83,
-                "points": 2
-              }
-            ],
-            "total": 2
-          },
-          "importance": 0.0,
-          "teams": {
-            "started": [],
-            "benched": [
-              {
-                "name": "LUC PRIME"
-              },
-              {
-                "name": "Swiping Fatties"
-              }
-            ]
           }
         },
         {
@@ -6930,15 +6923,29 @@
           }
         },
         {
-          "id": 165,
-          "name": "João Pedro",
-          "teamCode": 8,
-          "opponent": "BRE (A)",
+          "id": 423,
+          "name": "Shaw",
+          "teamCode": 1,
+          "opponent": "FUL (A)",
           "fixtureTime": "Done",
-          "points": 0,
+          "points": 2,
           "matchStatus": null,
           "isLive": false,
-          "pointDetails": null,
+          "pointDetails": {
+            "rows": [
+              {
+                "identifier": "defensive_contribution",
+                "value": 3,
+                "points": 0
+              },
+              {
+                "identifier": "minutes",
+                "value": 83,
+                "points": 2
+              }
+            ],
+            "total": 2
+          },
           "importance": -50.0,
           "teams": {
             "started": [
@@ -6951,17 +6958,7 @@
                 "captain": false
               }
             ],
-            "benched": [
-              {
-                "name": "maubeefcherkii"
-              },
-              {
-                "name": "joshur10"
-              },
-              {
-                "name": "Change Name"
-              }
-            ]
+            "benched": []
           }
         },
         {
@@ -8025,6 +8022,38 @@
           }
         },
         {
+          "id": 165,
+          "name": "João Pedro",
+          "teamCode": 8,
+          "opponent": "BRE (A)",
+          "fixtureTime": "Done",
+          "points": 0,
+          "matchStatus": null,
+          "isLive": false,
+          "pointDetails": null,
+          "importance": 0.0,
+          "teams": {
+            "started": [],
+            "benched": [
+              {
+                "name": "maubeefcherkii"
+              },
+              {
+                "name": "joshur10"
+              },
+              {
+                "name": "LUC PRIME"
+              },
+              {
+                "name": "Change Name"
+              },
+              {
+                "name": "Swiping Fatties"
+              }
+            ]
+          }
+        },
+        {
           "id": 268,
           "name": "King",
           "teamCode": 54,
@@ -8178,43 +8207,6 @@
             "benched": [
               {
                 "name": "joshur10"
-              }
-            ]
-          }
-        },
-        {
-          "id": 423,
-          "name": "Shaw",
-          "teamCode": 1,
-          "opponent": "FUL (A)",
-          "fixtureTime": "Done",
-          "points": 2,
-          "matchStatus": null,
-          "isLive": false,
-          "pointDetails": {
-            "rows": [
-              {
-                "identifier": "defensive_contribution",
-                "value": 3,
-                "points": 0
-              },
-              {
-                "identifier": "minutes",
-                "value": 83,
-                "points": 2
-              }
-            ],
-            "total": 2
-          },
-          "importance": 0.0,
-          "teams": {
-            "started": [],
-            "benched": [
-              {
-                "name": "LUC PRIME"
-              },
-              {
-                "name": "Swiping Fatties"
               }
             ]
           }
@@ -8902,15 +8894,29 @@
           }
         },
         {
-          "id": 165,
-          "name": "João Pedro",
-          "teamCode": 8,
-          "opponent": "BRE (A)",
+          "id": 423,
+          "name": "Shaw",
+          "teamCode": 1,
+          "opponent": "FUL (A)",
           "fixtureTime": "Done",
-          "points": 0,
+          "points": 2,
           "matchStatus": null,
           "isLive": false,
-          "pointDetails": null,
+          "pointDetails": {
+            "rows": [
+              {
+                "identifier": "defensive_contribution",
+                "value": 3,
+                "points": 0
+              },
+              {
+                "identifier": "minutes",
+                "value": 83,
+                "points": 2
+              }
+            ],
+            "total": 2
+          },
           "importance": -50.0,
           "teams": {
             "started": [
@@ -8923,17 +8929,7 @@
                 "captain": false
               }
             ],
-            "benched": [
-              {
-                "name": "maubeefcherkii"
-              },
-              {
-                "name": "joshur10"
-              },
-              {
-                "name": "Change Name"
-              }
-            ]
+            "benched": []
           }
         },
         {
@@ -9713,15 +9709,29 @@
           }
         },
         {
-          "id": 165,
-          "name": "João Pedro",
-          "teamCode": 8,
-          "opponent": "BRE (A)",
+          "id": 423,
+          "name": "Shaw",
+          "teamCode": 1,
+          "opponent": "FUL (A)",
           "fixtureTime": "Done",
-          "points": 0,
+          "points": 2,
           "matchStatus": null,
           "isLive": false,
-          "pointDetails": null,
+          "pointDetails": {
+            "rows": [
+              {
+                "identifier": "defensive_contribution",
+                "value": 3,
+                "points": 0
+              },
+              {
+                "identifier": "minutes",
+                "value": 83,
+                "points": 2
+              }
+            ],
+            "total": 2
+          },
           "importance": 75.0,
           "teams": {
             "started": [
@@ -9734,17 +9744,7 @@
                 "captain": false
               }
             ],
-            "benched": [
-              {
-                "name": "maubeefcherkii"
-              },
-              {
-                "name": "joshur10"
-              },
-              {
-                "name": "Change Name"
-              }
-            ]
+            "benched": []
           }
         },
         {
@@ -10280,6 +10280,38 @@
           }
         },
         {
+          "id": 165,
+          "name": "João Pedro",
+          "teamCode": 8,
+          "opponent": "BRE (A)",
+          "fixtureTime": "Done",
+          "points": 0,
+          "matchStatus": null,
+          "isLive": false,
+          "pointDetails": null,
+          "importance": 0.0,
+          "teams": {
+            "started": [],
+            "benched": [
+              {
+                "name": "maubeefcherkii"
+              },
+              {
+                "name": "joshur10"
+              },
+              {
+                "name": "LUC PRIME"
+              },
+              {
+                "name": "Change Name"
+              },
+              {
+                "name": "Swiping Fatties"
+              }
+            ]
+          }
+        },
+        {
           "id": 268,
           "name": "King",
           "teamCode": 54,
@@ -10373,43 +10405,6 @@
             "benched": [
               {
                 "name": "joshur10"
-              }
-            ]
-          }
-        },
-        {
-          "id": 423,
-          "name": "Shaw",
-          "teamCode": 1,
-          "opponent": "FUL (A)",
-          "fixtureTime": "Done",
-          "points": 2,
-          "matchStatus": null,
-          "isLive": false,
-          "pointDetails": {
-            "rows": [
-              {
-                "identifier": "defensive_contribution",
-                "value": 3,
-                "points": 0
-              },
-              {
-                "identifier": "minutes",
-                "value": 83,
-                "points": 2
-              }
-            ],
-            "total": 2
-          },
-          "importance": 0.0,
-          "teams": {
-            "started": [],
-            "benched": [
-              {
-                "name": "LUC PRIME"
-              },
-              {
-                "name": "Swiping Fatties"
               }
             ]
           }
@@ -11520,6 +11515,7 @@
       "gameweekPoints": 64,
       "totalPoints": 404,
       "transfersMade": 1,
+      "netChanges": 1,
       "bankedFTs": 1,
       "transferCost": 0,
       "transfers": [
@@ -12424,7 +12420,7 @@
           "matchStatus": null,
           "isLive": false,
           "pointDetails": null,
-          "importance": -25.0,
+          "importance": 0.0,
           "position": 4,
           "pickPosition": 13,
           "multiplier": 0,
@@ -12432,16 +12428,7 @@
           "isViceCaptain": false,
           "isBenched": true,
           "teams": {
-            "started": [
-              {
-                "name": "LUC PRIME",
-                "captain": false
-              },
-              {
-                "name": "Swiping Fatties",
-                "captain": false
-              }
-            ],
+            "started": [],
             "benched": [
               {
                 "name": "maubeefcherkii"
@@ -12451,6 +12438,12 @@
               },
               {
                 "name": "Change Name"
+              },
+              {
+                "name": "LUC PRIME"
+              },
+              {
+                "name": "Swiping Fatties"
               }
             ]
           }
@@ -12464,6 +12457,7 @@
       "gameweekPoints": 65,
       "totalPoints": 388,
       "transfersMade": 0,
+      "netChanges": 12,
       "bankedFTs": 2,
       "transferCost": 0,
       "transfers": [
@@ -13423,7 +13417,7 @@
           "matchStatus": null,
           "isLive": false,
           "pointDetails": null,
-          "importance": -25.0,
+          "importance": 0.0,
           "position": 4,
           "pickPosition": 15,
           "multiplier": 0,
@@ -13431,16 +13425,7 @@
           "isViceCaptain": false,
           "isBenched": true,
           "teams": {
-            "started": [
-              {
-                "name": "LUC PRIME",
-                "captain": false
-              },
-              {
-                "name": "Swiping Fatties",
-                "captain": false
-              }
-            ],
+            "started": [],
             "benched": [
               {
                 "name": "maubeefcherkii"
@@ -13450,6 +13435,12 @@
               },
               {
                 "name": "Change Name"
+              },
+              {
+                "name": "LUC PRIME"
+              },
+              {
+                "name": "Swiping Fatties"
               }
             ]
           }
@@ -13463,6 +13454,7 @@
       "gameweekPoints": 38,
       "totalPoints": 356,
       "transfersMade": 1,
+      "netChanges": 1,
       "bankedFTs": 3,
       "transferCost": 0,
       "transfers": [
@@ -14303,7 +14295,7 @@
           "matchStatus": null,
           "isLive": false,
           "pointDetails": null,
-          "importance": -25.0,
+          "importance": 0.0,
           "position": 4,
           "pickPosition": 15,
           "multiplier": 0,
@@ -14311,16 +14303,7 @@
           "isViceCaptain": false,
           "isBenched": true,
           "teams": {
-            "started": [
-              {
-                "name": "LUC PRIME",
-                "captain": false
-              },
-              {
-                "name": "Swiping Fatties",
-                "captain": false
-              }
-            ],
+            "started": [],
             "benched": [
               {
                 "name": "maubeefcherkii"
@@ -14330,6 +14313,12 @@
               },
               {
                 "name": "Change Name"
+              },
+              {
+                "name": "LUC PRIME"
+              },
+              {
+                "name": "Swiping Fatties"
               }
             ]
           }
@@ -14340,9 +14329,10 @@
       "id": 2020069,
       "team": "LUC PRIME",
       "manager": "lucas ang",
-      "gameweekPoints": 36,
-      "totalPoints": 350,
+      "gameweekPoints": 38,
+      "totalPoints": 352,
       "transfersMade": 1,
+      "netChanges": 1,
       "bankedFTs": 0,
       "transferCost": 0,
       "transfers": [
@@ -14622,10 +14612,10 @@
           }
         },
         {
-          "id": 480,
-          "name": "Gibbs-White",
-          "teamCode": 17,
-          "opponent": "COV (H)",
+          "id": 423,
+          "name": "Shaw",
+          "teamCode": 1,
+          "opponent": "FUL (A)",
           "fixtureTime": "Done",
           "points": 2,
           "matchStatus": null,
@@ -14634,19 +14624,19 @@
             "rows": [
               {
                 "identifier": "defensive_contribution",
-                "value": 2,
+                "value": 3,
                 "points": 0
               },
               {
                 "identifier": "minutes",
-                "value": 90,
+                "value": 83,
                 "points": 2
               }
             ],
             "total": 2
           },
-          "importance": 50.0,
-          "position": 3,
+          "importance": 87.5,
+          "position": 2,
           "pickPosition": 5,
           "multiplier": 1,
           "isCaptain": false,
@@ -14655,23 +14645,11 @@
           "teams": {
             "started": [
               {
-                "name": "maubeefcherkii",
-                "captain": false
-              },
-              {
-                "name": "joshur10",
-                "captain": false
-              },
-              {
-                "name": "Change Name",
-                "captain": false
-              },
-              {
                 "name": "LUC PRIME",
                 "captain": false
               },
               {
-                "name": "Hawkdown",
+                "name": "Swiping Fatties",
                 "captain": false
               }
             ],
@@ -14853,6 +14831,116 @@
           }
         },
         {
+          "id": 480,
+          "name": "Gibbs-White",
+          "teamCode": 17,
+          "opponent": "COV (H)",
+          "fixtureTime": "Done",
+          "points": 2,
+          "matchStatus": null,
+          "isLive": false,
+          "pointDetails": {
+            "rows": [
+              {
+                "identifier": "defensive_contribution",
+                "value": 2,
+                "points": 0
+              },
+              {
+                "identifier": "minutes",
+                "value": 90,
+                "points": 2
+              }
+            ],
+            "total": 2
+          },
+          "importance": 50.0,
+          "position": 3,
+          "pickPosition": 9,
+          "multiplier": 1,
+          "isCaptain": false,
+          "isViceCaptain": false,
+          "isBenched": false,
+          "teams": {
+            "started": [
+              {
+                "name": "maubeefcherkii",
+                "captain": false
+              },
+              {
+                "name": "joshur10",
+                "captain": false
+              },
+              {
+                "name": "Change Name",
+                "captain": false
+              },
+              {
+                "name": "LUC PRIME",
+                "captain": false
+              },
+              {
+                "name": "Hawkdown",
+                "captain": false
+              }
+            ],
+            "benched": []
+          }
+        },
+        {
+          "id": 346,
+          "name": "Calvert-Lewin",
+          "teamCode": 2,
+          "opponent": "CRY (H)",
+          "fixtureTime": "Done",
+          "points": 2,
+          "matchStatus": null,
+          "isLive": false,
+          "pointDetails": {
+            "rows": [
+              {
+                "identifier": "defensive_contribution",
+                "value": 8,
+                "points": 0
+              },
+              {
+                "identifier": "minutes",
+                "value": 90,
+                "points": 2
+              }
+            ],
+            "total": 2
+          },
+          "importance": 62.5,
+          "position": 4,
+          "pickPosition": 10,
+          "multiplier": 1,
+          "isCaptain": false,
+          "isViceCaptain": false,
+          "isBenched": false,
+          "teams": {
+            "started": [
+              {
+                "name": "LUC PRIME",
+                "captain": false
+              },
+              {
+                "name": "woballers",
+                "captain": false
+              },
+              {
+                "name": "WhoIsThisGuy?",
+                "captain": false
+              },
+              {
+                "name": "Hawkdown",
+                "captain": false
+              }
+            ],
+            "benched": []
+          }
+        },
+        {
           "id": 411,
           "name": "Haaland",
           "teamCode": 43,
@@ -14883,7 +14971,7 @@
           },
           "importance": 25.0,
           "position": 4,
-          "pickPosition": 9,
+          "pickPosition": 11,
           "multiplier": 2,
           "isCaptain": true,
           "isViceCaptain": false,
@@ -14925,100 +15013,6 @@
               {
                 "name": "Swiping Fatties",
                 "captain": true
-              }
-            ],
-            "benched": []
-          }
-        },
-        {
-          "id": 165,
-          "name": "João Pedro",
-          "teamCode": 8,
-          "opponent": "BRE (A)",
-          "fixtureTime": "Done",
-          "points": 0,
-          "matchStatus": null,
-          "isLive": false,
-          "pointDetails": null,
-          "importance": 87.5,
-          "position": 4,
-          "pickPosition": 10,
-          "multiplier": 1,
-          "isCaptain": false,
-          "isViceCaptain": false,
-          "isBenched": false,
-          "teams": {
-            "started": [
-              {
-                "name": "LUC PRIME",
-                "captain": false
-              },
-              {
-                "name": "Swiping Fatties",
-                "captain": false
-              }
-            ],
-            "benched": [
-              {
-                "name": "maubeefcherkii"
-              },
-              {
-                "name": "joshur10"
-              },
-              {
-                "name": "Change Name"
-              }
-            ]
-          }
-        },
-        {
-          "id": 346,
-          "name": "Calvert-Lewin",
-          "teamCode": 2,
-          "opponent": "CRY (H)",
-          "fixtureTime": "Done",
-          "points": 2,
-          "matchStatus": null,
-          "isLive": false,
-          "pointDetails": {
-            "rows": [
-              {
-                "identifier": "defensive_contribution",
-                "value": 8,
-                "points": 0
-              },
-              {
-                "identifier": "minutes",
-                "value": 90,
-                "points": 2
-              }
-            ],
-            "total": 2
-          },
-          "importance": 62.5,
-          "position": 4,
-          "pickPosition": 11,
-          "multiplier": 1,
-          "isCaptain": false,
-          "isViceCaptain": false,
-          "isBenched": false,
-          "teams": {
-            "started": [
-              {
-                "name": "LUC PRIME",
-                "captain": false
-              },
-              {
-                "name": "woballers",
-                "captain": false
-              },
-              {
-                "name": "WhoIsThisGuy?",
-                "captain": false
-              },
-              {
-                "name": "Hawkdown",
-                "captain": false
               }
             ],
             "benched": []
@@ -15069,49 +15063,6 @@
               },
               {
                 "name": "Hawkdown"
-              },
-              {
-                "name": "Swiping Fatties"
-              }
-            ]
-          }
-        },
-        {
-          "id": 423,
-          "name": "Shaw",
-          "teamCode": 1,
-          "opponent": "FUL (A)",
-          "fixtureTime": "Done",
-          "points": 2,
-          "matchStatus": null,
-          "isLive": false,
-          "pointDetails": {
-            "rows": [
-              {
-                "identifier": "defensive_contribution",
-                "value": 3,
-                "points": 0
-              },
-              {
-                "identifier": "minutes",
-                "value": 83,
-                "points": 2
-              }
-            ],
-            "total": 2
-          },
-          "importance": 0.0,
-          "position": 2,
-          "pickPosition": 13,
-          "multiplier": 0,
-          "isCaptain": false,
-          "isViceCaptain": false,
-          "isBenched": true,
-          "teams": {
-            "started": [],
-            "benched": [
-              {
-                "name": "LUC PRIME"
               },
               {
                 "name": "Swiping Fatties"
@@ -15216,6 +15167,44 @@
               }
             ]
           }
+        },
+        {
+          "id": 165,
+          "name": "João Pedro",
+          "teamCode": 8,
+          "opponent": "BRE (A)",
+          "fixtureTime": "Done",
+          "points": 0,
+          "matchStatus": null,
+          "isLive": false,
+          "pointDetails": null,
+          "importance": 0.0,
+          "position": 4,
+          "pickPosition": 13,
+          "multiplier": 0,
+          "isCaptain": false,
+          "isViceCaptain": false,
+          "isBenched": true,
+          "teams": {
+            "started": [],
+            "benched": [
+              {
+                "name": "maubeefcherkii"
+              },
+              {
+                "name": "joshur10"
+              },
+              {
+                "name": "Change Name"
+              },
+              {
+                "name": "LUC PRIME"
+              },
+              {
+                "name": "Swiping Fatties"
+              }
+            ]
+          }
         }
       ]
     },
@@ -15226,6 +15215,7 @@
       "gameweekPoints": 42,
       "totalPoints": 345,
       "transfersMade": 1,
+      "netChanges": 1,
       "bankedFTs": 0,
       "transferCost": 0,
       "transfers": [
@@ -16059,6 +16049,7 @@
       "gameweekPoints": 33,
       "totalPoints": 342,
       "transfersMade": 0,
+      "netChanges": 10,
       "bankedFTs": 1,
       "transferCost": 0,
       "transfers": [
@@ -17078,6 +17069,7 @@
       "gameweekPoints": 41,
       "totalPoints": 336,
       "transfersMade": 0,
+      "netChanges": 6,
       "bankedFTs": 2,
       "transferCost": 0,
       "transfers": [
@@ -18026,6 +18018,7 @@
       "gameweekPoints": 42,
       "totalPoints": 330,
       "transfersMade": 0,
+      "netChanges": 12,
       "bankedFTs": 1,
       "transferCost": 0,
       "transfers": [
@@ -19449,9 +19442,10 @@
       "id": 3425313,
       "team": "Swiping Fatties",
       "manager": "giga swipers",
-      "gameweekPoints": 41,
-      "totalPoints": 307,
+      "gameweekPoints": 43,
+      "totalPoints": 309,
       "transfersMade": 0,
+      "netChanges": 0,
       "bankedFTs": 1,
       "transferCost": 0,
       "transfers": [],
@@ -19610,6 +19604,72 @@
           }
         },
         {
+          "id": 31,
+          "name": "Konsa",
+          "teamCode": 3,
+          "opponent": "BHA (A)",
+          "fixtureTime": "Done",
+          "points": 1,
+          "matchStatus": null,
+          "isLive": false,
+          "pointDetails": {
+            "rows": [
+              {
+                "identifier": "defensive_contribution",
+                "value": 4,
+                "points": 0
+              },
+              {
+                "identifier": "minutes",
+                "value": 90,
+                "points": 2
+              },
+              {
+                "identifier": "goals_conceded",
+                "value": 3,
+                "points": -1
+              }
+            ],
+            "total": 1
+          },
+          "importance": 50.0,
+          "position": 2,
+          "pickPosition": 3,
+          "multiplier": 1,
+          "isCaptain": false,
+          "isViceCaptain": false,
+          "isBenched": false,
+          "teams": {
+            "started": [
+              {
+                "name": "joshur10",
+                "captain": false
+              },
+              {
+                "name": "Change Name",
+                "captain": false
+              },
+              {
+                "name": "woballers",
+                "captain": false
+              },
+              {
+                "name": "WhoIsThisGuy?",
+                "captain": false
+              },
+              {
+                "name": "Swiping Fatties",
+                "captain": false
+              }
+            ],
+            "benched": [
+              {
+                "name": "Hawkdown"
+              }
+            ]
+          }
+        },
+        {
           "id": 173,
           "name": "Thomas",
           "teamCode": 9,
@@ -19646,7 +19706,7 @@
           },
           "importance": 100.0,
           "position": 2,
-          "pickPosition": 3,
+          "pickPosition": 4,
           "multiplier": 1,
           "isCaptain": false,
           "isViceCaptain": false,
@@ -19669,37 +19729,32 @@
           }
         },
         {
-          "id": 31,
-          "name": "Konsa",
-          "teamCode": 3,
-          "opponent": "BHA (A)",
+          "id": 423,
+          "name": "Shaw",
+          "teamCode": 1,
+          "opponent": "FUL (A)",
           "fixtureTime": "Done",
-          "points": 1,
+          "points": 2,
           "matchStatus": null,
           "isLive": false,
           "pointDetails": {
             "rows": [
               {
                 "identifier": "defensive_contribution",
-                "value": 4,
+                "value": 3,
                 "points": 0
               },
               {
                 "identifier": "minutes",
-                "value": 90,
+                "value": 83,
                 "points": 2
-              },
-              {
-                "identifier": "goals_conceded",
-                "value": 3,
-                "points": -1
               }
             ],
-            "total": 1
+            "total": 2
           },
-          "importance": 50.0,
+          "importance": 87.5,
           "position": 2,
-          "pickPosition": 4,
+          "pickPosition": 5,
           "multiplier": 1,
           "isCaptain": false,
           "isViceCaptain": false,
@@ -19707,19 +19762,7 @@
           "teams": {
             "started": [
               {
-                "name": "joshur10",
-                "captain": false
-              },
-              {
-                "name": "Change Name",
-                "captain": false
-              },
-              {
-                "name": "woballers",
-                "captain": false
-              },
-              {
-                "name": "WhoIsThisGuy?",
+                "name": "LUC PRIME",
                 "captain": false
               },
               {
@@ -19727,11 +19770,7 @@
                 "captain": false
               }
             ],
-            "benched": [
-              {
-                "name": "Hawkdown"
-              }
-            ]
+            "benched": []
           }
         },
         {
@@ -19760,7 +19799,7 @@
           },
           "importance": 87.5,
           "position": 3,
-          "pickPosition": 5,
+          "pickPosition": 6,
           "multiplier": 1,
           "isCaptain": false,
           "isViceCaptain": true,
@@ -19777,6 +19816,64 @@
               }
             ],
             "benched": []
+          }
+        },
+        {
+          "id": 127,
+          "name": "Gomez",
+          "teamCode": 36,
+          "opponent": "ARS (H)",
+          "fixtureTime": "Done",
+          "points": 8,
+          "matchStatus": null,
+          "isLive": false,
+          "pointDetails": {
+            "rows": [
+              {
+                "identifier": "assists",
+                "value": 1,
+                "points": 3
+              },
+              {
+                "identifier": "defensive_contribution",
+                "value": 13,
+                "points": 2
+              },
+              {
+                "identifier": "clean_sheets",
+                "value": 1,
+                "points": 1
+              },
+              {
+                "identifier": "minutes",
+                "value": 85,
+                "points": 2
+              }
+            ],
+            "total": 8
+          },
+          "importance": 100.0,
+          "position": 3,
+          "pickPosition": 7,
+          "multiplier": 1,
+          "isCaptain": false,
+          "isViceCaptain": false,
+          "isBenched": false,
+          "teams": {
+            "started": [
+              {
+                "name": "Swiping Fatties",
+                "captain": false
+              }
+            ],
+            "benched": [
+              {
+                "name": "LUC PRIME"
+              },
+              {
+                "name": "WhoIsThisGuy?"
+              }
+            ]
           }
         },
         {
@@ -19805,7 +19902,7 @@
           },
           "importance": 50.0,
           "position": 3,
-          "pickPosition": 6,
+          "pickPosition": 8,
           "multiplier": 1,
           "isCaptain": false,
           "isViceCaptain": false,
@@ -19862,7 +19959,7 @@
           },
           "importance": 0.0,
           "position": 3,
-          "pickPosition": 7,
+          "pickPosition": 9,
           "multiplier": 1,
           "isCaptain": false,
           "isViceCaptain": false,
@@ -19906,64 +20003,6 @@
           }
         },
         {
-          "id": 127,
-          "name": "Gomez",
-          "teamCode": 36,
-          "opponent": "ARS (H)",
-          "fixtureTime": "Done",
-          "points": 8,
-          "matchStatus": null,
-          "isLive": false,
-          "pointDetails": {
-            "rows": [
-              {
-                "identifier": "assists",
-                "value": 1,
-                "points": 3
-              },
-              {
-                "identifier": "defensive_contribution",
-                "value": 13,
-                "points": 2
-              },
-              {
-                "identifier": "clean_sheets",
-                "value": 1,
-                "points": 1
-              },
-              {
-                "identifier": "minutes",
-                "value": 85,
-                "points": 2
-              }
-            ],
-            "total": 8
-          },
-          "importance": 100.0,
-          "position": 3,
-          "pickPosition": 8,
-          "multiplier": 1,
-          "isCaptain": false,
-          "isViceCaptain": false,
-          "isBenched": false,
-          "teams": {
-            "started": [
-              {
-                "name": "Swiping Fatties",
-                "captain": false
-              }
-            ],
-            "benched": [
-              {
-                "name": "LUC PRIME"
-              },
-              {
-                "name": "WhoIsThisGuy?"
-              }
-            ]
-          }
-        },
-        {
           "id": 557,
           "name": "Tzolis",
           "teamCode": 3,
@@ -19989,7 +20028,7 @@
           },
           "importance": 87.5,
           "position": 3,
-          "pickPosition": 9,
+          "pickPosition": 10,
           "multiplier": 1,
           "isCaptain": false,
           "isViceCaptain": false,
@@ -20039,7 +20078,7 @@
           },
           "importance": 25.0,
           "position": 4,
-          "pickPosition": 10,
+          "pickPosition": 11,
           "multiplier": 2,
           "isCaptain": true,
           "isViceCaptain": false,
@@ -20084,47 +20123,6 @@
               }
             ],
             "benched": []
-          }
-        },
-        {
-          "id": 165,
-          "name": "João Pedro",
-          "teamCode": 8,
-          "opponent": "BRE (A)",
-          "fixtureTime": "Done",
-          "points": 0,
-          "matchStatus": null,
-          "isLive": false,
-          "pointDetails": null,
-          "importance": 87.5,
-          "position": 4,
-          "pickPosition": 11,
-          "multiplier": 1,
-          "isCaptain": false,
-          "isViceCaptain": false,
-          "isBenched": false,
-          "teams": {
-            "started": [
-              {
-                "name": "LUC PRIME",
-                "captain": false
-              },
-              {
-                "name": "Swiping Fatties",
-                "captain": false
-              }
-            ],
-            "benched": [
-              {
-                "name": "maubeefcherkii"
-              },
-              {
-                "name": "joshur10"
-              },
-              {
-                "name": "Change Name"
-              }
-            ]
           }
         },
         {
@@ -20180,49 +20178,6 @@
           }
         },
         {
-          "id": 423,
-          "name": "Shaw",
-          "teamCode": 1,
-          "opponent": "FUL (A)",
-          "fixtureTime": "Done",
-          "points": 2,
-          "matchStatus": null,
-          "isLive": false,
-          "pointDetails": {
-            "rows": [
-              {
-                "identifier": "defensive_contribution",
-                "value": 3,
-                "points": 0
-              },
-              {
-                "identifier": "minutes",
-                "value": 83,
-                "points": 2
-              }
-            ],
-            "total": 2
-          },
-          "importance": 0.0,
-          "position": 2,
-          "pickPosition": 13,
-          "multiplier": 0,
-          "isCaptain": false,
-          "isViceCaptain": false,
-          "isBenched": true,
-          "teams": {
-            "started": [],
-            "benched": [
-              {
-                "name": "LUC PRIME"
-              },
-              {
-                "name": "Swiping Fatties"
-              }
-            ]
-          }
-        },
-        {
           "id": 175,
           "name": "van Ewijk",
           "teamCode": 9,
@@ -20244,6 +20199,44 @@
             "benched": [
               {
                 "name": "woballers"
+              },
+              {
+                "name": "Swiping Fatties"
+              }
+            ]
+          }
+        },
+        {
+          "id": 165,
+          "name": "João Pedro",
+          "teamCode": 8,
+          "opponent": "BRE (A)",
+          "fixtureTime": "Done",
+          "points": 0,
+          "matchStatus": null,
+          "isLive": false,
+          "pointDetails": null,
+          "importance": 0.0,
+          "position": 4,
+          "pickPosition": 13,
+          "multiplier": 0,
+          "isCaptain": false,
+          "isViceCaptain": false,
+          "isBenched": true,
+          "teams": {
+            "started": [],
+            "benched": [
+              {
+                "name": "maubeefcherkii"
+              },
+              {
+                "name": "joshur10"
+              },
+              {
+                "name": "Change Name"
+              },
+              {
+                "name": "LUC PRIME"
               },
               {
                 "name": "Swiping Fatties"

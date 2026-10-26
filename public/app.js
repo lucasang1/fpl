@@ -1338,11 +1338,11 @@ function createTeamValueSummary(detail) {
     : undefined;
 
   for (const [label, value, formatter] of [
+    ["Banked FTs", detail.bankedFTs, formatStatValue],
     ["Squad Value", squadValue, formatTeamValue],
     ["Bank", detail.bank, formatTeamValue],
     ["Total Value", detail.teamValue, formatTeamValue],
     ["Total Pts", detail.totalPoints, formatStatValue],
-    ["Banked FTs", detail.bankedFTs, formatStatValue],
   ]) {
     const item = document.createElement("div");
     const itemLabel = document.createElement("span");

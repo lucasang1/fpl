@@ -455,7 +455,7 @@ button:disabled { cursor: wait; opacity: .65; }
 
 @keyframes refresh-icon-turn {
   to {
-    transform: rotate(360deg);
+    transform: rotate(1080deg);
   }
 }
 

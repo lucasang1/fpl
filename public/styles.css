@@ -1396,7 +1396,7 @@ a:hover { color: var(--muted); }
   background: transparent;
 }
 
-.team-player-row:not(.team-player-row-benched) + .team-player-row-benched {
+.team-player-row-bench-start {
   border-top: 1px solid var(--border-strong);
 }
 

@@ -1306,6 +1306,7 @@ function createTeamPlayerRow(player, chip) {
 
   row.className = "ownership-row team-player-row";
   if (player.isBenched) row.classList.add("team-player-row-benched");
+  if (player.pickPosition === 12) row.classList.add("team-player-row-bench-start");
   if (player.isLive) row.classList.add("player-live");
   if (player.autoSubRole) {
     row.classList.add(

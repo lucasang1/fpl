@@ -25,6 +25,9 @@
   --backdrop: rgb(0 0 0 / 8%);
   --danger: #8b0000;
   --live: #007a3d;
+  --auto-sub-out: #e33b52;
+  --auto-sub-in: #16a85a;
+  --auto-sub-row-bg: #dedede;
   --table-header-bg: transparent;
   --table-row-bg: transparent;
   --table-row-alt-bg: transparent;
@@ -65,6 +68,9 @@
   --backdrop: rgb(0 0 0 / 42%);
   --danger: #ff8e8e;
   --live: #63d98a;
+  --auto-sub-out: #ff5269;
+  --auto-sub-in: #35d477;
+  --auto-sub-row-bg: #272c31;
   --table-header-bg: #32383e;
   --table-row-bg: #32383e;
   --table-row-alt-bg: #3c4147;
@@ -1361,6 +1367,26 @@ a:hover { color: var(--muted); }
   cursor: pointer;
 }
 
+.ownership-row.team-player-row.team-player-row-auto-sub,
+.ownership-row.team-player-row.team-player-row-auto-sub:hover {
+  background: var(--auto-sub-row-bg);
+}
+
+.auto-sub-arrow {
+  flex: 0 0 auto;
+  font-size: .95rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.team-player-row .auto-sub-arrow-out {
+  color: var(--auto-sub-out);
+}
+
+.team-player-row .auto-sub-arrow-in {
+  color: var(--auto-sub-in);
+}
+
 .team-player-name {
   color: var(--strong);
   font-weight: 750;
@@ -1372,6 +1398,14 @@ a:hover { color: var(--muted); }
 
 .team-player-row:not(.team-player-row-benched) + .team-player-row-benched {
   border-top: 1px solid var(--border-strong);
+}
+
+.ownership-row.team-player-row.team-player-row-auto-sub-out {
+  border-top: 0;
+}
+
+.ownership-row.team-player-row.team-player-row-auto-sub-in {
+  border-bottom: 0;
 }
 
 .team-player-row-benched .team-player-name,

@@ -43,6 +43,12 @@ POSITION_SORT_ORDER = {
     3: 2,  # Midfielders
     4: 3,  # Forwards
 }
+FORMATION_LIMITS = {
+    1: (1, 1),  # Goalkeepers
+    2: (3, 5),  # Defenders
+    3: (2, 5),  # Midfielders
+    4: (1, 3),  # Forwards
+}
 POINT_DETAIL_ORDER = {
     identifier: order
     for order, identifier in enumerate(
@@ -411,6 +417,226 @@ def _live_match_status(
     return "Live"
 
 
+def _finished_match_status(
+    live_element: JsonObject, fixtures: Iterable[JsonObject]
+) -> str | None:
+    fixtures = list(fixtures)
+    if not fixtures or not all(_fixture_finished(fixture) for fixture in fixtures):
+        return None
+
+    minutes = live_element.get("stats", {}).get("minutes")
+    if (
+        isinstance(minutes, int | float)
+        and not isinstance(minutes, bool)
+        and minutes == 0
+    ):
+        return "Did Not Play"
+    return None
+
+
+def _auto_sub_player_availability(
+    elements: Iterable[JsonObject],
+    fixtures: Iterable[JsonObject],
+    live_elements: Iterable[JsonObject],
+) -> tuple[set[int], set[int]]:
+    fixtures_by_team: dict[int, list[JsonObject]] = defaultdict(list)
+    for fixture in fixtures:
+        fixtures_by_team[fixture["team_h"]].append(fixture)
+        fixtures_by_team[fixture["team_a"]].append(fixture)
+
+    live_by_player = {element["id"]: element for element in live_elements}
+    did_not_play: set[int] = set()
+    eligible: set[int] = set()
+    for element in elements:
+        player_id = element["id"]
+        player_fixtures = fixtures_by_team.get(element.get("team"), [])
+        if not player_fixtures:
+            continue
+        if (
+            _finished_match_status(
+                live_by_player.get(player_id, {}), player_fixtures
+            )
+            == "Did Not Play"
+        ):
+            did_not_play.add(player_id)
+        else:
+            eligible.add(player_id)
+
+    return did_not_play, eligible
+
+
+def _valid_formation(position_counts: Counter[int]) -> bool:
+    return all(
+        minimum <= position_counts.get(position, 0) <= maximum
+        for position, (minimum, maximum) in FORMATION_LIMITS.items()
+    )
+
+
+def _project_auto_sub_pairs(
+    picks: Iterable[JsonObject],
+    did_not_play: set[int],
+    eligible: set[int],
+    positions: dict[int, int | None],
+) -> list[tuple[int, int]]:
+    picks = list(picks)
+    starters = sorted(
+        (pick for pick in picks if pick.get("position", 99) <= 11),
+        key=lambda pick: pick.get("position", 99),
+    )
+    bench = sorted(
+        (pick for pick in picks if pick.get("position", 0) > 11),
+        key=lambda pick: pick.get("position", 99),
+    )
+    unavailable = [
+        pick for pick in starters if pick.get("element") in did_not_play
+    ]
+    formation = Counter(positions.get(pick["element"]) for pick in starters)
+    substitutions: list[tuple[int, int]] = []
+
+    for incoming in bench:
+        incoming_id = incoming["element"]
+        incoming_position = positions.get(incoming_id)
+        if incoming_id not in eligible or incoming_position not in FORMATION_LIMITS:
+            continue
+
+        candidates = sorted(
+            (
+                outgoing
+                for outgoing in unavailable
+                if positions.get(outgoing["element"]) in FORMATION_LIMITS
+                and (
+                    incoming_position != 1
+                    or positions.get(outgoing["element"]) == 1
+                )
+                and (
+                    incoming_position == 1
+                    or positions.get(outgoing["element"]) != 1
+                )
+            ),
+            key=lambda outgoing: (
+                positions.get(outgoing["element"]) != incoming_position,
+                outgoing.get("position", 99),
+            ),
+        )
+        for outgoing in candidates:
+            outgoing_id = outgoing["element"]
+            outgoing_position = positions[outgoing_id]
+            projected_formation = formation.copy()
+            projected_formation[outgoing_position] -= 1
+            projected_formation[incoming_position] += 1
+            if not _valid_formation(projected_formation):
+                continue
+
+            substitutions.append((outgoing_id, incoming_id))
+            unavailable.remove(outgoing)
+            formation = projected_formation
+            break
+
+    return substitutions
+
+
+def _tag_auto_sub_pairs(
+    picks: list[JsonObject], substitutions: Iterable[tuple[int, int]]
+) -> None:
+    picks_by_id = {pick["element"]: pick for pick in picks}
+    for outgoing_id, incoming_id in substitutions:
+        outgoing = picks_by_id.get(outgoing_id)
+        incoming = picks_by_id.get(incoming_id)
+        if outgoing is None or incoming is None:
+            continue
+        outgoing["autoSubRole"] = "out"
+        outgoing["autoSubPartnerId"] = incoming_id
+        incoming["autoSubRole"] = "in"
+        incoming["autoSubPartnerId"] = outgoing_id
+
+
+def _resolve_entry_picks(
+    event_data: JsonObject,
+    did_not_play: set[int],
+    eligible: set[int],
+    positions: dict[int, int | None],
+) -> list[JsonObject]:
+    picks = [dict(pick) for pick in event_data.get("picks", [])]
+    official_substitutions = [
+        (substitution.get("element_out"), substitution.get("element_in"))
+        for substitution in event_data.get("automatic_subs", [])
+        if isinstance(substitution.get("element_out"), int)
+        and isinstance(substitution.get("element_in"), int)
+    ]
+    if official_substitutions:
+        _tag_auto_sub_pairs(picks, official_substitutions)
+        return picks
+
+    if not picks or not all(isinstance(pick.get("position"), int) for pick in picks):
+        return picks
+    if not all(positions.get(pick["element"]) in FORMATION_LIMITS for pick in picks):
+        return picks
+
+    active_chip = event_data.get("active_chip")
+    substitutions = (
+        []
+        if active_chip == "bboost"
+        else _project_auto_sub_pairs(picks, did_not_play, eligible, positions)
+    )
+    _tag_auto_sub_pairs(picks, substitutions)
+
+    incoming_ids = {incoming_id for _, incoming_id in substitutions}
+    if active_chip == "bboost":
+        active_ids = {pick["element"] for pick in picks} - did_not_play
+    else:
+        active_ids = {
+            pick["element"]
+            for pick in picks
+            if pick["position"] <= 11 and pick["element"] not in did_not_play
+        } | incoming_ids
+
+    for pick in picks:
+        pick["multiplier"] = int(pick["element"] in active_ids)
+
+    captain = next((pick for pick in picks if pick.get("is_captain")), None)
+    vice_captain = next(
+        (pick for pick in picks if pick.get("is_vice_captain")), None
+    )
+    captain_multiplier = 3 if active_chip == "3xc" else 2
+    if captain and captain["element"] in active_ids:
+        captain["multiplier"] = captain_multiplier
+    elif (
+        captain
+        and captain["element"] in did_not_play
+        and vice_captain
+        and vice_captain["element"] in active_ids
+    ):
+        vice_captain["multiplier"] = captain_multiplier
+
+    return picks
+
+
+def _resolve_auto_substitutions(
+    entry_event_data: dict[int, JsonObject],
+    elements: Iterable[JsonObject],
+    fixtures: Iterable[JsonObject],
+    live_elements: Iterable[JsonObject],
+) -> dict[int, JsonObject]:
+    elements = list(elements)
+    fixtures = list(fixtures)
+    live_elements = list(live_elements)
+    did_not_play, eligible = _auto_sub_player_availability(
+        elements, fixtures, live_elements
+    )
+    positions = {
+        element["id"]: element.get("element_type") for element in elements
+    }
+    return {
+        entry_id: {
+            **event_data,
+            "picks": _resolve_entry_picks(
+                event_data, did_not_play, eligible, positions
+            ),
+        }
+        for entry_id, event_data in entry_event_data.items()
+    }
+
+
 def _build_player_context(
     elements: Iterable[JsonObject],
     teams: Iterable[JsonObject],
@@ -492,19 +718,25 @@ def _build_player_context(
         )
         fixture_time = (
             "Done"
-            if any(fixture["finished"] for fixture in player_fixtures)
-            else ", ".join(fixture["time"] for fixture in player_fixtures)
+            if all(fixture["finished"] for fixture in player_fixtures)
+            else ", ".join(
+                fixture["time"]
+                for fixture in player_fixtures
+                if not fixture["finished"]
+            )
         )
         points = live_points.get(player_id, 0) if any(
             fixture["started"] for fixture in player_fixtures
         ) else "-"
+        live_element = live_by_player.get(player_id, {})
+        match_status = _live_match_status(live_element, live_fixture)
+        if match_status is None:
+            match_status = _finished_match_status(live_element, player_fixtures)
         return {
             "opponent": opponent,
             "fixtureTime": fixture_time,
             "points": points,
-            "matchStatus": _live_match_status(
-                live_by_player.get(player_id, {}), live_fixture
-            ),
+            "matchStatus": match_status,
             "isLive": live_fixture is not None,
         }
 
@@ -826,6 +1058,8 @@ def _format_team_details(
                     "position": player.get("position"),
                     "pickPosition": pick.get("position"),
                     "multiplier": multiplier,
+                    "autoSubRole": pick.get("autoSubRole"),
+                    "autoSubPartnerId": pick.get("autoSubPartnerId"),
                     "isCaptain": bool(pick.get("is_captain")),
                     "isViceCaptain": bool(pick.get("is_vice_captain")),
                     "isBenched": multiplier == 0,
@@ -838,7 +1072,11 @@ def _format_team_details(
         picks.sort(
             key=lambda pick: (
                 1 if (pick.get("pickPosition") or 99) > 11 else 0,
-                POSITION_SORT_ORDER.get(pick.get("position"), 99),
+                (
+                    pick.get("pickPosition") or 99
+                    if (pick.get("pickPosition") or 99) > 11
+                    else POSITION_SORT_ORDER.get(pick.get("position"), 99)
+                ),
                 pick.get("pickPosition") or 99,
                 pick["name"],
             )
@@ -1399,14 +1637,22 @@ def fetch_standings(
         else []
     )
     live = fetch_json(f"{FPL_API_URL}/event/{gameweek['id']}/live/") if standings else {}
-    refresh_policy = _refresh_policy(fixtures)
-    _apply_gameweek_status_counts(
-        standings,
+    effective_entry_event_data = _resolve_auto_substitutions(
         entry_event_data,
         bootstrap["elements"],
         fixtures,
+        live.get("elements", []),
     )
-    _apply_live_gameweek_points(standings, entry_event_data, live.get("elements", []))
+    refresh_policy = _refresh_policy(fixtures)
+    _apply_gameweek_status_counts(
+        standings,
+        effective_entry_event_data,
+        bootstrap["elements"],
+        fixtures,
+    )
+    _apply_live_gameweek_points(
+        standings, effective_entry_event_data, live.get("elements", [])
+    )
     _sort_and_rank_standings(standings)
     pairs = _format_pairs(standings, pairings)
     duo_importance = _format_duo_importance(
@@ -1415,11 +1661,11 @@ def fetch_standings(
         bootstrap.get("teams", []),
         fixtures,
         live.get("elements", []),
-        entry_event_data,
+        effective_entry_event_data,
     )
     team_details = _format_team_details(
         standings,
-        entry_event_data,
+        effective_entry_event_data,
         transfer_data,
         chip_history,
         gameweek["id"],

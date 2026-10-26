@@ -1276,10 +1276,25 @@ function playerCaptainLabel(player) {
 }
 
 function teamPlayerPoints(player, chip) {
-  if (player.isCaptain && Number.isFinite(player.points)) {
+  if (!Number.isFinite(player.points)) return player.points;
+  if (Number.isFinite(player.multiplier) && player.multiplier > 1) {
+    return player.points * player.multiplier;
+  }
+  if (!Number.isFinite(player.multiplier) && player.isCaptain) {
     return player.points * (chip === "TC" ? 3 : 2);
   }
   return player.points;
+}
+
+function createAutoSubArrow(role) {
+  if (role !== "in" && role !== "out") return undefined;
+
+  const arrow = document.createElement("span");
+  arrow.className = `auto-sub-arrow auto-sub-arrow-${role}`;
+  arrow.textContent = role === "in" ? "↑" : "↓";
+  arrow.setAttribute("aria-label", role === "in" ? "Auto-subbed in" : "Auto-subbed out");
+  arrow.title = role === "in" ? "Auto-subbed in" : "Auto-subbed out";
+  return arrow;
 }
 
 function createTeamPlayerRow(player, chip) {
@@ -1292,11 +1307,19 @@ function createTeamPlayerRow(player, chip) {
   row.className = "ownership-row team-player-row";
   if (player.isBenched) row.classList.add("team-player-row-benched");
   if (player.isLive) row.classList.add("player-live");
+  if (player.autoSubRole) {
+    row.classList.add(
+      "team-player-row-auto-sub",
+      `team-player-row-auto-sub-${player.autoSubRole}`,
+    );
+  }
   name.className = "importance-player-button team-player-name";
   name.type = "button";
   fixtureTime.className = "player-match-status";
   points.className = "player-points";
   name.replaceChildren(createPlayerNameContent(player, player.name, playerCaptainLabel(player)));
+  const autoSubArrow = createAutoSubArrow(player.autoSubRole);
+  if (autoSubArrow) name.append(autoSubArrow);
   opponent.textContent = player.opponent;
   fixtureTime.textContent = player.matchStatus || player.fixtureTime || "-";
   points.textContent = teamPlayerPoints(player, chip);

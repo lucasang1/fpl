@@ -869,10 +869,14 @@ class FormatTeamDetailsTests(unittest.TestCase):
                 "Saka",
                 "Watkins",
                 "Flekken",
-                "White",
                 "Palmer",
                 "Haaland",
+                "White",
             ],
+        )
+        self.assertEqual(
+            [player["pickPosition"] for player in details[0]["players"][4:]],
+            [12, 13, 14, 15],
         )
         self.assertTrue(details[0]["players"][4]["isBenched"])
         self.assertEqual(details[0]["players"][0]["teamCode"], 3)
